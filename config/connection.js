@@ -8,9 +8,9 @@ const connection = mysql.createConnection({
   // port: process.env.DB_PORT
 
   host: "127.0.0.1",
-  user: "root",
-  password: "",
-  database: "demo_lotto",
+  user: "basz",
+  password: "26153220.Bb",
+  database: "meow_lotto",
   // timezone: "Asia/Bangkok",
   charset: "utf8",
   
