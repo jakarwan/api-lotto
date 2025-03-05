@@ -340,7 +340,7 @@ router.put(
         //   req.file.filename;
         // const host = req.hostname;
         const name = req.body.name;
-        const hostname = "api.laosviangjanvip.com";
+        const hostname = req.get('host');
         const reqhttps = "https";
         //   const lotto_type_img = req.file;
         const lotto_type_id = req.body.lotto_type_id;
