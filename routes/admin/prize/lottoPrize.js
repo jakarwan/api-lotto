@@ -154,7 +154,7 @@ router.get("/prize-result", verifyToken, (req, res) => {
             [startDate, endDate],
             (error, result, fields) => {
               if (result === undefined) {
-                return res.status(400).send({ status: false });
+                return res.status(400).send({ status: false, msg: error });
               } else {
                 // const data = paginatedResults(req, res, result);
                 return res.status(200).send({ status: true, data: result });
