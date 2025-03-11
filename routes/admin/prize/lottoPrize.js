@@ -170,7 +170,6 @@ WHERE p.date_lotto BETWEEN '${startDate}' AND '${endDate}'
 GROUP BY p.poy_code 
 ORDER BY MAX(lt.closing_time) DESC;
 `;
-console.log(sql,'sql')
           connection.query(
             sql,
             [startDate, endDate],
