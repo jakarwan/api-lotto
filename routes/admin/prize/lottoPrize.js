@@ -161,12 +161,12 @@ router.get("/prize-result", verifyToken, (req, res) => {
        MAX(mb.familyName) AS familyName, 
        (SELECT SUM(total * pay) FROM lotto_number 
         WHERE status = 'suc' 
-        AND installment_date BETWEEN ${startDate} AND ${endDate} 
+        AND installment_date BETWEEN '${startDate}' AND '${endDate}'
         AND poy_code = p.poy_code) AS sum_prize 
 FROM poy AS p 
 LEFT JOIN lotto_type AS lt ON p.lotto_type_id = lt.lotto_type_id 
 LEFT JOIN member AS mb ON p.created_by = mb.id 
-WHERE p.date_lotto BETWEEN ${startDate} AND ${endDate}
+WHERE p.date_lotto BETWEEN '${startDate}' AND '${endDate}'
 GROUP BY p.poy_code 
 ORDER BY MAX(lt.closing_time) DESC;
 `;
