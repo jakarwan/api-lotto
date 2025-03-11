@@ -74,8 +74,33 @@ router.get("/prize-result", verifyToken, (req, res) => {
         console.log("0");
         // status = 'suc'
         // var sql = `SELECT poy_code, created_at, status_poy, status, lotto_type_id, (SELECT lotto_type_name FROM lotto_type WHERE lotto_type_id = ln.lotto_type_id) as lotto_type_name, (SELECT SUM(price * pay) FROM lotto_number WHERE poy_code = ln.poy_code AND status = 'suc') as sum_prize, (SELECT SUM(total) FROM lotto_number WHERE poy_code = ln.poy_code AND status != 'close') as sum_total, (SELECT SUM(discount) FROM lotto_number WHERE poy_code = ln.poy_code AND status != 'close') as sum_discount, (SELECT note FROM poy WHERE poy_code = ln.poy_code) as note, (SELECT name FROM member WHERE id = ln.created_by) as name, (SELECT familyName FROM member WHERE id = ln.created_by) as familyName, (SELECT status_result FROM poy WHERE poy_code = ln.poy_code) as status_result, (SELECT SUM(aff_amount) FROM aff_log WHERE poy_code = ln.poy_code) as aff_amount FROM lotto_number ln WHERE lotto_type_id = ? AND date_lotto >= ? AND date_lotto <= ? GROUP BY poy_code ORDER BY created_at DESC`;
-        var sql = `SELECT p.poy_code, p.created_at, p.status as status_poy, p.lotto_type_id, p.status_result, p.total, p.discount as sum_discount, p.price as sum_total, p.note, lt.lotto_type_name, mb.name, mb.familyName, (SELECT SUM(total * pay) FROM lotto_number WHERE status = 'suc' 
-        AND installment_date >= ${startDate} AND installment_date <= ${endDate} AND lotto_type_id = ${lotto_type_id} AND poy_code = p.poy_code GROUP BY created_by) as sum_prize FROM poy as p LEFT JOIN lotto_type as lt ON p.lotto_type_id = lt.lotto_type_id LEFT JOIN member as mb ON p.created_by = mb.id LEFT JOIN prize_log as pl ON p.poy_code = pl.poy_code WHERE p.lotto_type_id = ? AND p.date_lotto >= ? AND p.date_lotto <= ? GROUP BY p.poy_code ORDER BY lt.closing_time DESC`;
+        var sql = `SELECT p.poy_code, 
+       MAX(p.created_at) AS created_at, 
+       MAX(p.status) AS status_poy, 
+       MAX(p.lotto_type_id) AS lotto_type_id, 
+       MAX(p.status_result) AS status_result, 
+       MAX(p.total) AS total, 
+       MAX(p.discount) AS sum_discount, 
+       MAX(p.price) AS sum_total, 
+       MAX(p.note) AS note, 
+       MAX(lt.lotto_type_name) AS lotto_type_name, 
+       MAX(mb.name) AS name, 
+       MAX(mb.familyName) AS familyName, 
+       (SELECT SUM(total * pay) 
+        FROM lotto_number 
+        WHERE status = 'suc' 
+              AND installment_date BETWEEN ${startDate} AND ${endDate} 
+              AND lotto_type_id = ${lotto_type_id} 
+              AND poy_code = p.poy_code) AS sum_prize
+FROM poy AS p 
+LEFT JOIN lotto_type AS lt ON p.lotto_type_id = lt.lotto_type_id 
+LEFT JOIN member AS mb ON p.created_by = mb.id 
+LEFT JOIN prize_log AS pl ON p.poy_code = pl.poy_code 
+WHERE p.lotto_type_id = ? 
+      AND p.date_lotto BETWEEN ? AND ? 
+GROUP BY p.poy_code 
+ORDER BY MAX(lt.closing_time) DESC;
+`;
         connection.query(
           sql,
           [lotto_type_id, startDate, endDate],
