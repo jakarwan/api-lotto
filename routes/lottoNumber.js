@@ -716,9 +716,9 @@ router.post("/cancel-lotto/admin", verifyToken, (req, res) => {
               //   (error, resultType, fields) => {
               //     if (resultType != "") {
               var now = moment(new Date()).format("YYYY-MM-DD HH:mm:ss");
-              var d = moment(new Date(resultType[0].closing_time)).format(
-                "YYYY-MM-DD HH:mm:ss"
-              );
+              // var d = moment(new Date(resultType[0].closing_time)).format(
+              //   "YYYY-MM-DD HH:mm:ss"
+              // );
               connection.query(
                 `UPDATE poy SET status = 'CAN' WHERE poy_code = ? AND created_by = ?`,
                 [billCode, resultCheckPoy[0].created_by],
