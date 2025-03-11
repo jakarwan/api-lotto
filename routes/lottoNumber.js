@@ -710,92 +710,61 @@ router.post("/cancel-lotto/admin", verifyToken, (req, res) => {
           [billCode, "SUC"],
           (error, resultCheckPoy, fields) => {
             if (resultCheckPoy != "") {
+              // connection.query(
+              //   `SELECT lotto_type_name, closing_time FROM lotto_type WHERE lotto_type_id = ? AND open = 1`,
+              //   [lotto_type_id],
+              //   (error, resultType, fields) => {
+              //     if (resultType != "") {
+              var now = moment(new Date()).format("YYYY-MM-DD HH:mm:ss");
+              var d = moment(new Date(resultType[0].closing_time)).format(
+                "YYYY-MM-DD HH:mm:ss"
+              );
               connection.query(
-                `SELECT lotto_type_name, closing_time FROM lotto_type WHERE lotto_type_id = ? AND open = 1`,
-                [lotto_type_id],
-                (error, resultType, fields) => {
-                  if (resultType != "") {
-                    var now = moment(new Date()).format("YYYY-MM-DD HH:mm:ss");
-                    var d = moment(new Date(resultType[0].closing_time)).format(
-                      "YYYY-MM-DD HH:mm:ss"
-                    );
-                    connection.query(
-                      `UPDATE poy SET status = 'CAN' WHERE poy_code = ? AND created_by = ?`,
-                      [billCode, resultCheckPoy[0].created_by],
-                      (error, result, fields) => {
-                        connection.query(
-                          `UPDATE lotto_number SET status_poy = 'CAN' WHERE poy_code = ? AND created_by = ?`,
-                          [billCode, resultCheckPoy[0].created_by],
-                          (error, result, fields) => {
+                `UPDATE poy SET status = 'CAN' WHERE poy_code = ? AND created_by = ?`,
+                [billCode, resultCheckPoy[0].created_by],
+                (error, result, fields) => {
+                  connection.query(
+                    `UPDATE lotto_number SET status_poy = 'CAN' WHERE poy_code = ? AND created_by = ?`,
+                    [billCode, resultCheckPoy[0].created_by],
+                    (error, result, fields) => {
+                      connection.query(
+                        `SELECT p.total, mb.credit_balance FROM poy as p JOIN member as mb ON p.created_by = mb.id WHERE p.poy_code = ? AND p.created_by = ? AND p.status = ?`,
+                        [billCode, resultCheckPoy[0].created_by, "CAN"],
+                        (error, resultTotal, fields) => {
+                          if (resultTotal != "") {
+                            let balance =
+                              resultTotal[0].credit_balance +
+                              resultTotal[0].total;
                             connection.query(
-                              `SELECT p.total, mb.credit_balance FROM poy as p JOIN member as mb ON p.created_by = mb.id WHERE p.poy_code = ? AND p.created_by = ? AND p.status = ?`,
-                              [billCode, resultCheckPoy[0].created_by, "CAN"],
-                              (error, resultTotal, fields) => {
-                                if (resultTotal != "") {
-                                  let balance =
-                                    resultTotal[0].credit_balance +
-                                    resultTotal[0].total;
-                                  connection.query(
-                                    `UPDATE member SET credit_balance = ? WHERE id = ?`,
-                                    [balance, resultCheckPoy[0].created_by],
-                                    (error, resultUpdate, fields) => {
-                                      return res.status(200).send({
-                                        status: true,
-                                        msg: "ยกเลิกโพยสำเร็จ",
-                                      });
-                                    }
-                                  );
-                                } else {
-                                  return res.status(400).send({
-                                    status: false,
-                                    msg: "โพยนี้ถูกยกเลิกแล้ว",
-                                  });
-                                }
+                              `UPDATE member SET credit_balance = ? WHERE id = ?`,
+                              [balance, resultCheckPoy[0].created_by],
+                              (error, resultUpdate, fields) => {
+                                return res.status(200).send({
+                                  status: true,
+                                  msg: "ยกเลิกโพยสำเร็จ",
+                                });
                               }
                             );
+                          } else {
+                            return res.status(400).send({
+                              status: false,
+                              msg: "โพยนี้ถูกยกเลิกแล้ว",
+                            });
                           }
-                        );
-                      }
-                    );
-                    // } else {
-                    //   return res.status(400).send({
-                    //     status: false,
-                    //     msg: "เกินเวลายกเลิกโพยกรุณายกเลิกก่อน 15 นาที",
-                    //   });
-                    // }
-                    //   }
-                    // );
-                  } else {
-                    return res.status(400).send({
-                      status: false,
-                      msg: "หวยนี้ปิดแล้ว ไม่สามารถยกเลิกโพยได้",
-                    });
-                  }
-                  // if (resultType != "") {
-                  //   connection.query(
-                  //     `SELECT * FROM poy WHERE poy_code = ? AND lotto_type_id = ?`,
-                  //     [billCode, lotto_type_id],
-                  //     (error, resultPoy, fields) => {
-                  //
-                  //     }
-                  //   );
-                  // } else {
-                  //   return res
-                  //     .status(400)
-                  //     .send({ status: false, msg: "กรุณากรอกเลขหวย" });
-                  // }
-
-                  // if (resultPoy) {
-                  //   return res
-                  //     .status(400)
-                  //     .send({ status: false, msg: "กรุณากรอกเลขหวย" });
-                  // } else {
-                  //   return res
-                  //     .status(400)
-                  //     .send({ status: false, msg: "กรุณากรอกเลขหวย" });
-                  // }
+                        }
+                      );
+                    }
+                  );
                 }
               );
+              // } else {
+              //   return res.status(400).send({
+              //     status: false,
+              //     msg: "หวยนี้ปิดแล้ว ไม่สามารถยกเลิกโพยได้",
+              //   });
+              // }
+              //   }
+              // );
             } else {
               return res.status(400).send({
                 status: false,
