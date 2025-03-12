@@ -39,7 +39,7 @@ router.get("/all", verifyToken, (req, res) => {
       if (lotto_type_id != null) {
         if (number != null) {
           var sql =
-            "SELECT cn_id, number, type, date_lotto, pay, pay2, pay3, buy_limit, buy_limit2, buy_limit3, (SELECT lotto_type_name FROM lotto_type WHERE lotto_type_id = cn.lotto_type_id) as lotto_type_name FROM close_number cn WHERE lotto_type_id = ? AND number LIKE '%' ? '%'";
+            "SELECT cn_id, number, type, date_lotto, pay, pay2, pay3, pay4, pay5 buy_limit, buy_limit2, buy_limit3, buy_limit4, buy_limit5, (SELECT lotto_type_name FROM lotto_type WHERE lotto_type_id = cn.lotto_type_id) as lotto_type_name FROM close_number cn WHERE lotto_type_id = ? AND number LIKE '%' ? '%'";
           connection.query(
             sql,
             [lotto_type_id, number],
@@ -53,7 +53,7 @@ router.get("/all", verifyToken, (req, res) => {
           );
         } else {
           var sql =
-            "SELECT cn_id, number, type, date_lotto, pay, pay2, pay3, buy_limit, buy_limit2, buy_limit3, (SELECT lotto_type_name FROM lotto_type WHERE lotto_type_id = cn.lotto_type_id) as lotto_type_name FROM close_number cn WHERE lotto_type_id = ?";
+            "SELECT cn_id, number, type, date_lotto, pay, pay2, pay3, pay4, pay5, buy_limit, buy_limit2, buy_limit3, buy_limit4, buy_limit5, (SELECT lotto_type_name FROM lotto_type WHERE lotto_type_id = cn.lotto_type_id) as lotto_type_name FROM close_number cn WHERE lotto_type_id = ?";
           connection.query(sql, [lotto_type_id], (error, resultAll, fields) => {
             // if (result != "") {
             return res.status(200).send({ status: true, data: resultAll });
@@ -92,7 +92,7 @@ router.post("/", verifyToken, (req, res) => {
         // var sql =
         //   "SELECT number, type, buy_limit, pay FROM close_number WHERE lotto_type_id = ?";
         var sql =
-          "SELECT cn_id, number, type,(CASE WHEN buy_limit > 0 THEN buy_limit WHEN buy_limit2 > 0 THEN buy_limit2 ELSE buy_limit3 END) as buy_limit, (CASE WHEN buy_limit > 0 THEN pay WHEN buy_limit2 > 0 THEN pay2 ELSE pay3 END) as pay, (CASE WHEN buy_limit > 0 THEN 1 WHEN buy_limit2 > 0 THEN 2 ELSE 3 END) as series FROM close_number WHERE lotto_type_id = ?;";
+          "SELECT cn_id, number, type,(CASE WHEN buy_limit > 0 THEN buy_limit WHEN buy_limit2 > 0 THEN buy_limit2 WHEN buy_limit3 > 0 THEN buy_limit3 WHEN buy_limit4 > 0 THEN buy_limit4 ELSE buy_limit5 END) as buy_limit, (CASE WHEN buy_limit > 0 THEN pay WHEN buy_limit2 > 0 THEN pay2 WHEN buy_limit3 > 0 THEN pay3 WHEN buy_limit4 > 0 THEN pay4 ELSE pay5 END) as pay, (CASE WHEN buy_limit > 0 THEN 1 WHEN buy_limit2 > 0 THEN 2 WHEN buy_limit > 0 THEN 3 WHEN buy_limit > 0 THEN 4 ELSE 5 END) as series FROM close_number WHERE lotto_type_id = ?;";
         connection.query(sql, [lotto_type_id], (error, result, fields) => {
           const arr = [];
           const openNumberArr = [];
@@ -156,9 +156,13 @@ router.post("/add-close-number", verifyToken, (req, res) => {
       const pay = req.body.pay;
       const pay2 = req.body.pay2;
       const pay3 = req.body.pay3;
+      const pay4 = req.body.pay4;
+      const pay5 = req.body.pay5;
       const buy_limit = req.body.buy_limit;
       const buy_limit2 = req.body.buy_limit2;
       const buy_limit3 = req.body.buy_limit3;
+      const buy_limit4 = req.body.buy_limit4;
+      const buy_limit5 = req.body.buy_limit5;
       const allNumber = req.body.allNumber;
       if (lotto_type_id != null && number != null && type != null) {
         var sql = "SELECT * FROM lotto_type WHERE lotto_type_id = ?";
@@ -178,7 +182,7 @@ router.post("/add-close-number", verifyToken, (req, res) => {
                     i = `${i}`;
                   }
                   var sql =
-                    "INSERT INTO close_number (lotto_type_id, number, type, pay, pay2, pay3, buy_limit, buy_limit2, buy_limit3, date_lotto) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    "INSERT INTO close_number (lotto_type_id, number, type, pay, pay2, pay3, pay4, pay5, buy_limit, buy_limit2, buy_limit3, buy_limit4, buy_limit5, date_lotto) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                   connection.query(
                     sql,
                     [
@@ -188,9 +192,13 @@ router.post("/add-close-number", verifyToken, (req, res) => {
                       pay,
                       pay2,
                       pay3,
+                      pay4,
+                      pay5,
                       buy_limit,
                       buy_limit2,
                       buy_limit3,
+                      buy_limit4,
+                      buy_limit5,
                       d,
                     ],
                     (error, result, fields) => {}
@@ -206,7 +214,7 @@ router.post("/add-close-number", verifyToken, (req, res) => {
                     i = `${i}`;
                   }
                   var sql =
-                    "INSERT INTO close_number (lotto_type_id, number, type, pay, pay2, pay3, buy_limit, buy_limit2, buy_limit3, date_lotto) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                    "INSERT INTO close_number (lotto_type_id, number, type, pay, pay2, pay3, pay4, pay5, buy_limit, buy_limit2, buy_limit3, buy_limit4, buy_limit5, date_lotto) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                   connection.query(
                     sql,
                     [
@@ -216,9 +224,13 @@ router.post("/add-close-number", verifyToken, (req, res) => {
                       pay,
                       pay2,
                       pay3,
+                      pay4,
+                      pay5,
                       buy_limit,
                       buy_limit2,
                       buy_limit3,
+                      buy_limit4,
+                      buy_limit5,
                       d,
                     ],
                     (error, result, fields) => {}
@@ -228,7 +240,7 @@ router.post("/add-close-number", verifyToken, (req, res) => {
             } else {
               number.forEach((item) => {
                 var sql =
-                  "INSERT INTO close_number (lotto_type_id, number, type, pay, pay2, pay3, buy_limit, buy_limit2, buy_limit3, date_lotto) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                  "INSERT INTO close_number (lotto_type_id, number, type, pay, pay2, pay3, pay4, pay5, buy_limit, buy_limit2, buy_limit3, buy_limit4, buy_limit5, date_lotto) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                 connection.query(
                   sql,
                   [
@@ -238,9 +250,13 @@ router.post("/add-close-number", verifyToken, (req, res) => {
                     pay,
                     pay2,
                     pay3,
+                    pay4,
+                    pay5,
                     buy_limit,
                     buy_limit2,
                     buy_limit3,
+                    buy_limit4,
+                    buy_limit5,
                     d,
                   ],
                   (error, result, fields) => {}
@@ -328,13 +344,17 @@ router.put("/edit-close-number", verifyToken, (req, res) => {
       const pay = req.body.pay;
       const pay2 = req.body.pay2;
       const pay3 = req.body.pay3;
+      const pay4 = req.body.pay4;
+      const pay5 = req.body.pay5;
       const buy_limit = req.body.buy_limit;
       const buy_limit2 = req.body.buy_limit2;
       const buy_limit3 = req.body.buy_limit3;
+      const buy_limit4 = req.body.buy_limit4;
+      const buy_limit5 = req.body.buy_limit5;
       var sql = "";
       if (cn_id != null) {
         sql =
-          "UPDATE close_number SET pay = ?, pay2 = ?, pay3 = ?, buy_limit = ?, buy_limit2 = ?, buy_limit3 = ? WHERE cn_id = ?";
+          "UPDATE close_number SET pay = ?, pay2 = ?, pay3 = ?, pay4 = ?, pay5 = ?, buy_limit = ?, buy_limit2 = ?, buy_limit3 = ?, buy_limit4 = ?, buy_limit5 = ? WHERE cn_id = ?";
       } else {
         return res
           .status(400)
@@ -342,7 +362,7 @@ router.put("/edit-close-number", verifyToken, (req, res) => {
       }
       connection.query(
         sql,
-        [pay, pay2, pay3, buy_limit, buy_limit2, buy_limit3, cn_id],
+        [pay, pay2, pay3, pay4, pay5, buy_limit, buy_limit2, buy_limit3, buy_limit4, buy_limit5, cn_id],
         (error, result, fields) => {
           return res
             .status(200)
