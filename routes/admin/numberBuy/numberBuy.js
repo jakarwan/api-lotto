@@ -59,4 +59,22 @@ router.get("/coin", (req, res) => {
   // });
 });
 
+router.get("/lotto-play-total", (req, res) => {
+  // jwt.verify(req.token, "secretkey", (err, data) => {
+  // if (!err) {
+  var lotto_type_id = req.query.lotto_type_id;
+  var date = req.query.date;
+  if (date != null) {
+    var sql =
+      "SELECT number, type_option, COUNT(*) AS count, SUM(price) AS total FROM lotto_number WHERE lotto_type_id = ? AND installment_date = ? GROUP BY number, type_option ORDER BY total DESC;";
+    connection.query(sql, [lotto_type_id, date], (error, result, fields) => {
+      return res.status(200).send({ status: true, data: result });
+    });
+  } else {
+    return res
+      .status(400)
+      .send({ status: false, msg: "กรุณาส่ง lotto_type_id, date" });
+  }
+});
+
 module.exports = router;
