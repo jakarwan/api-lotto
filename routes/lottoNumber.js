@@ -9,6 +9,7 @@ const moment = require("moment");
 const {
   lottoNumberInsert,
   closeLottoNumberUpdate,
+  maxPlayUpdate,
 } = require("../routes/sql/lottoNumber");
 
 router.get("/", verifyToken, (req, res) => {
@@ -208,7 +209,7 @@ router.post("/add-lotto", verifyToken, (req, res) => {
                 let totalLimit = 0;
                 const arrClose = [];
                 var sql =
-                  "SELECT cn_id, number, type,(CASE WHEN buy_limit > 0 THEN buy_limit WHEN buy_limit2 > 0 THEN buy_limit2 ELSE buy_limit3 END) as buy_limit, (CASE WHEN buy_limit > 0 THEN pay WHEN buy_limit2 > 0 THEN pay2 ELSE pay3 END) as pay, (CASE WHEN buy_limit > 0 THEN 1 WHEN buy_limit2 > 0 THEN 2 ELSE 3 END) as series FROM close_number WHERE lotto_type_id = ?;";
+                  "SELECT cn_id, number, type,(CASE WHEN buy_limit > 0 THEN buy_limit WHEN buy_limit2 > 0 THEN buy_limit2 WHEN buy_limit3 > 0 THEN buy_limit3 WHEN buy_limit4 > 0 THEN buy_limit4 ELSE buy_limit5 END) as buy_limit, (CASE WHEN buy_limit > 0 THEN pay WHEN buy_limit2 > 0 THEN pay2 WHEN buy_limit3 > 0 THEN pay3 WHEN buy_limit4 > 0 THEN pay4 ELSE pay5 END) as pay, (CASE WHEN buy_limit > 0 THEN 1 WHEN buy_limit2 > 0 THEN 2 WHEN buy_limit3 > 0 THEN 3 WHEN buy_limit4 > 0 THEN 4 ELSE 5 END) as series FROM close_number WHERE lotto_type_id = ?;";
                 connection.query(
                   sql,
                   [lotto_type_id],
@@ -249,285 +250,326 @@ router.post("/add-lotto", verifyToken, (req, res) => {
                     console.log(arrClose, "arrClose");
                     if (arrClose == "") {
                       connection.query(
-                        `SELECT credit_balance, is_active, refs_code, phone FROM member WHERE id = ?`,
+                        `SELECT credit_balance, is_active, refs_code, phone, max_limit, max_play FROM member WHERE id = ?`,
                         [data.user.id],
-                        (error, resultBalance, fields) => {
+                        async (error, resultBalance, fields) => {
                           if (resultBalance[0].is_active != 0) {
                             if (
                               resultBalance[0].credit_balance >=
                               parseFloat(grandTotal)
                             ) {
-                              console.log("ifresult");
-                              connection.query(
-                                `SELECT MAX(poy_id) as id FROM poy`,
-                                (error, resultMax, fields) => {
-                                  let maxId = resultMax[0].id + 1;
+                              if (
+                                parseFloat(grandTotal) <=
+                                resultBalance[0].max_limit
+                              ) {
+                                if (resultBalance[0].max_play > 0) {
+                                  var sumLimit = resultBalance[0].max_play - 1;
+                                  console.log(sumLimit, "data.user.id");
+                                  var params = [sumLimit, data.user.id];
+                                  const updateMaxPlay = await maxPlayUpdate(
+                                    params
+                                  );
                                   connection.query(
-                                    "INSERT INTO poy (poy_code, price, discount, total, note, lotto_type_id, created_by, lotto_total, installment_date, date_lotto) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, curdate())",
-                                    [
-                                      `BILL${maxId}`,
-                                      totalPrice,
-                                      totalDiscountPrice,
-                                      grandTotal,
-                                      note,
-                                      lotto_type_id,
-                                      data.user.id,
-                                      number.length,
-                                      dateNow,
-                                    ],
-                                    (error, resultInsertBill, fields) => {
-                                      let close = "wait";
-                                      number.forEach(async (item) => {
-                                        if (resultCloseNumber != "") {
-                                          if (item.selected == "3 ตัวโต๊ด") {
-                                            let result6back = func6back(
-                                              item.number
-                                            );
-
-                                            resultCloseNumber.forEach((el) => {
-                                              if (el.type == "3 ตัวโต๊ด") {
-                                                if (
-                                                  result6back.indexOf(
-                                                    el.number
-                                                  ) != -1
-                                                ) {
-                                                  close = "close";
-                                                }
-                                              }
-                                            });
-                                          }
-                                          var params = [
-                                            item.number,
-                                            item.selected,
-                                            item.price,
-                                            item.pay,
-                                            item.discount,
-                                            parseFloat(item.price) -
-                                              parseFloat(item.discount),
-                                            lotto_type_id,
-                                            data.user.id,
-                                            `BILL${maxId}`,
-                                            close,
-                                            dateNow,
-                                          ];
-                                          const insertLotto =
-                                            await lottoNumberInsert(params);
-                                          resultCloseNumber.forEach(
-                                            async (el) => {
-                                              if (
-                                                el.number == item.number &&
-                                                el.type == item.selected
-                                              ) {
-                                                let updateField = null;
-                                                if (
-                                                  item.price <= el.buy_limit
-                                                ) {
-                                                  if (el.series === 1) {
-                                                    updateField = "buy_limit";
-                                                  } else {
-                                                    updateField =
-                                                      "buy_limit" + el.series;
-                                                  }
-                                                  totalLimit =
-                                                    el.buy_limit -
-                                                    parseFloat(item.price);
-                                                }
-                                                var params = [
-                                                  totalLimit,
-                                                  el.cn_id,
-                                                ];
-                                                const updateCloseLotto =
-                                                  await closeLottoNumberUpdate(
-                                                    updateField,
-                                                    params
-                                                  );
-                                              }
-                                            }
-                                          );
-                                        } else {
-                                          if (
-                                            item.number != null &&
-                                            item.selected != null &&
-                                            item.price != null &&
-                                            item.pay != null &&
-                                            item.discount != null
-                                          ) {
-                                            var params = [
-                                              item.number,
-                                              item.selected,
-                                              item.price,
-                                              item.pay,
-                                              item.discount,
-                                              parseFloat(item.price) -
-                                                parseFloat(item.discount),
-                                              lotto_type_id,
-                                              data.user.id,
-                                              `BILL${maxId}`,
-                                              close,
-                                              dateNow,
-                                            ];
-                                            const insertLotto =
-                                              await lottoNumberInsert(params);
-                                            resultCloseNumber.forEach(
-                                              async (el) => {
-                                                if (
-                                                  el.number == item.number &&
-                                                  el.type == item.selected
-                                                ) {
-                                                  let updateField = null;
-                                                  if (
-                                                    item.price <= el.buy_limit
-                                                  ) {
-                                                    if (el.series === 1) {
-                                                      updateField = "buy_limit";
-                                                    } else {
-                                                      updateField =
-                                                        "buy_limit" + el.series;
-                                                    }
-                                                    totalLimit =
-                                                      el.buy_limit -
-                                                      parseFloat(item.price);
-                                                  }
-                                                  var params = [
-                                                    totalLimit,
-                                                    el.cn_id,
-                                                  ];
-                                                  const updateCloseLotto =
-                                                    await closeLottoNumberUpdate(
-                                                      updateField,
-                                                      params
-                                                    );
-                                                }
-                                              }
-                                            );
-                                          }
-                                        }
-                                      });
-                                      let grandTotalPrice = 0;
-
-                                      grandTotalPrice =
-                                        resultBalance[0].credit_balance -
-                                        grandTotal;
+                                    `SELECT MAX(poy_id) as id FROM poy`,
+                                    (error, resultMax, fields) => {
+                                      let maxId = resultMax[0].id + 1;
                                       connection.query(
-                                        "UPDATE member SET credit_balance = ? WHERE id = ?",
-                                        [grandTotalPrice, data.user.id],
-                                        (error, resultUpdate, fields) => {
-                                          /////////////// affiliate ////////////////
-                                          connection.query(
-                                            `SELECT * FROM affiliate WHERE aff_code = ?`,
-                                            [resultBalance[0].phone],
-                                            (error, resultAff, fields) => {
-                                              if (resultAff != "") {
-                                                connection.query(
-                                                  `SELECT aff_percentage FROM member WHERE refs_code = ?`,
-                                                  [resultAff[0].refs_code],
-                                                  (
-                                                    error,
-                                                    resultAffPercentage,
-                                                    fields
-                                                  ) => {
+                                        "INSERT INTO poy (poy_code, price, discount, total, note, lotto_type_id, created_by, lotto_total, installment_date, date_lotto) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, curdate())",
+                                        [
+                                          `BILL${maxId}`,
+                                          totalPrice,
+                                          totalDiscountPrice,
+                                          grandTotal,
+                                          note,
+                                          lotto_type_id,
+                                          data.user.id,
+                                          number.length,
+                                          dateNow,
+                                        ],
+                                        (error, resultInsertBill, fields) => {
+                                          let close = "wait";
+                                          number.forEach(async (item) => {
+                                            if (resultCloseNumber != "") {
+                                              if (
+                                                item.selected == "3 ตัวโต๊ด"
+                                              ) {
+                                                let result6back = func6back(
+                                                  item.number
+                                                );
+
+                                                resultCloseNumber.forEach(
+                                                  (el) => {
                                                     if (
-                                                      resultAffPercentage.length !=
-                                                      0
+                                                      el.type == "3 ตัวโต๊ด"
                                                     ) {
                                                       if (
-                                                        totalDiscountPrice > 0
+                                                        result6back.indexOf(
+                                                          el.number
+                                                        ) != -1
                                                       ) {
-                                                        affAmount =
-                                                          (totalPrice *
-                                                            resultAffPercentage[0]
-                                                              .aff_percentage) /
-                                                          100 /
-                                                          2;
-                                                      } else if (
-                                                        totalDiscountPrice == 0
-                                                      ) {
-                                                        affAmount =
-                                                          (totalPrice *
-                                                            resultAffPercentage[0]
-                                                              .aff_percentage) /
-                                                          100;
+                                                        close = "close";
                                                       }
                                                     }
-                                                    var now = moment(
-                                                      new Date()
-                                                    ).format("YYYY-MM-DD");
-                                                    var sql =
-                                                      "INSERT INTO aff_log (refs_code, amount, poy_code, lotto_type_id, user_id, aff_amount, aff_date) VALUES(?, ?, ?, ?, ?, ?, ?)";
+                                                  }
+                                                );
+                                              }
+                                              var params = [
+                                                item.number,
+                                                item.selected,
+                                                item.price,
+                                                item.pay,
+                                                item.discount,
+                                                parseFloat(item.price) -
+                                                  parseFloat(item.discount),
+                                                lotto_type_id,
+                                                data.user.id,
+                                                `BILL${maxId}`,
+                                                close,
+                                                dateNow,
+                                              ];
+                                              const insertLotto =
+                                                await lottoNumberInsert(params);
+                                              resultCloseNumber.forEach(
+                                                async (el) => {
+                                                  if (
+                                                    el.number == item.number &&
+                                                    el.type == item.selected
+                                                  ) {
+                                                    let updateField = null;
+                                                    if (
+                                                      item.price <= el.buy_limit
+                                                    ) {
+                                                      if (el.series === 1) {
+                                                        updateField =
+                                                          "buy_limit";
+                                                      } else {
+                                                        updateField =
+                                                          "buy_limit" +
+                                                          el.series;
+                                                      }
+                                                      totalLimit =
+                                                        el.buy_limit -
+                                                        parseFloat(item.price);
+                                                    }
+                                                    var params = [
+                                                      totalLimit,
+                                                      el.cn_id,
+                                                    ];
+                                                    const updateCloseLotto =
+                                                      await closeLottoNumberUpdate(
+                                                        updateField,
+                                                        params
+                                                      );
+                                                  }
+                                                }
+                                              );
+                                            } else {
+                                              if (
+                                                item.number != null &&
+                                                item.selected != null &&
+                                                item.price != null &&
+                                                item.pay != null &&
+                                                item.discount != null
+                                              ) {
+                                                var params = [
+                                                  item.number,
+                                                  item.selected,
+                                                  item.price,
+                                                  item.pay,
+                                                  item.discount,
+                                                  parseFloat(item.price) -
+                                                    parseFloat(item.discount),
+                                                  lotto_type_id,
+                                                  data.user.id,
+                                                  `BILL${maxId}`,
+                                                  close,
+                                                  dateNow,
+                                                ];
+                                                const insertLotto =
+                                                  await lottoNumberInsert(
+                                                    params
+                                                  );
+                                                resultCloseNumber.forEach(
+                                                  async (el) => {
+                                                    if (
+                                                      el.number ==
+                                                        item.number &&
+                                                      el.type == item.selected
+                                                    ) {
+                                                      let updateField = null;
+                                                      if (
+                                                        item.price <=
+                                                        el.buy_limit
+                                                      ) {
+                                                        if (el.series === 1) {
+                                                          updateField =
+                                                            "buy_limit";
+                                                        } else {
+                                                          updateField =
+                                                            "buy_limit" +
+                                                            el.series;
+                                                        }
+                                                        totalLimit =
+                                                          el.buy_limit -
+                                                          parseFloat(
+                                                            item.price
+                                                          );
+                                                      }
+                                                      var params = [
+                                                        totalLimit,
+                                                        el.cn_id,
+                                                      ];
+                                                      const updateCloseLotto =
+                                                        await closeLottoNumberUpdate(
+                                                          updateField,
+                                                          params
+                                                        );
+                                                    }
+                                                  }
+                                                );
+                                              }
+                                            }
+                                          });
+                                          let grandTotalPrice = 0;
+
+                                          grandTotalPrice =
+                                            resultBalance[0].credit_balance -
+                                            grandTotal;
+                                          connection.query(
+                                            "UPDATE member SET credit_balance = ? WHERE id = ?",
+                                            [grandTotalPrice, data.user.id],
+                                            (error, resultUpdate, fields) => {
+                                              /////////////// affiliate ////////////////
+                                              connection.query(
+                                                `SELECT * FROM affiliate WHERE aff_code = ?`,
+                                                [resultBalance[0].phone],
+                                                (error, resultAff, fields) => {
+                                                  if (resultAff != "") {
                                                     connection.query(
-                                                      sql,
-                                                      [
-                                                        resultAff[0].refs_code,
-                                                        totalPrice,
-                                                        `BILL${maxId}`,
-                                                        lotto_type_id,
-                                                        data.user.id,
-                                                        affAmount,
-                                                        now,
-                                                      ],
+                                                      `SELECT aff_percentage FROM member WHERE refs_code = ?`,
+                                                      [resultAff[0].refs_code],
                                                       (
                                                         error,
-                                                        result,
+                                                        resultAffPercentage,
                                                         fields
                                                       ) => {
+                                                        if (
+                                                          resultAffPercentage.length !=
+                                                          0
+                                                        ) {
+                                                          if (
+                                                            totalDiscountPrice >
+                                                            0
+                                                          ) {
+                                                            affAmount =
+                                                              (totalPrice *
+                                                                resultAffPercentage[0]
+                                                                  .aff_percentage) /
+                                                              100 /
+                                                              2;
+                                                          } else if (
+                                                            totalDiscountPrice ==
+                                                            0
+                                                          ) {
+                                                            affAmount =
+                                                              (totalPrice *
+                                                                resultAffPercentage[0]
+                                                                  .aff_percentage) /
+                                                              100;
+                                                          }
+                                                        }
+                                                        var now = moment(
+                                                          new Date()
+                                                        ).format("YYYY-MM-DD");
+                                                        var sql =
+                                                          "INSERT INTO aff_log (refs_code, amount, poy_code, lotto_type_id, user_id, aff_amount, aff_date) VALUES(?, ?, ?, ?, ?, ?, ?)";
                                                         connection.query(
-                                                          `SELECT credit_balance, is_active, refs_code FROM member WHERE phone = ?`,
+                                                          sql,
                                                           [
                                                             resultAff[0]
                                                               .refs_code,
+                                                            totalPrice,
+                                                            `BILL${maxId}`,
+                                                            lotto_type_id,
+                                                            data.user.id,
+                                                            affAmount,
+                                                            now,
                                                           ],
                                                           (
                                                             error,
-                                                            resultBalanceHead,
+                                                            result,
                                                             fields
                                                           ) => {
-                                                            if (error)
-                                                              throw error;
-                                                            if (
-                                                              resultBalanceHead.length !=
-                                                              0
-                                                            ) {
-                                                              let creditBalanceHead =
-                                                                resultBalanceHead[0]
-                                                                  .credit_balance +
-                                                                affAmount;
-                                                              connection.query(
-                                                                "UPDATE member SET credit_balance = ? WHERE phone = ?",
-                                                                [
-                                                                  creditBalanceHead,
-                                                                  resultAff[0]
-                                                                    .refs_code,
-                                                                ],
-                                                                (
-                                                                  error,
-                                                                  resultUpdate,
-                                                                  fields
-                                                                ) => {
-                                                                  if (error)
-                                                                    throw error;
+                                                            connection.query(
+                                                              `SELECT credit_balance, is_active, refs_code FROM member WHERE phone = ?`,
+                                                              [
+                                                                resultAff[0]
+                                                                  .refs_code,
+                                                              ],
+                                                              (
+                                                                error,
+                                                                resultBalanceHead,
+                                                                fields
+                                                              ) => {
+                                                                if (error)
+                                                                  throw error;
+                                                                if (
+                                                                  resultBalanceHead.length !=
+                                                                  0
+                                                                ) {
+                                                                  let creditBalanceHead =
+                                                                    resultBalanceHead[0]
+                                                                      .credit_balance +
+                                                                    affAmount;
+                                                                  connection.query(
+                                                                    "UPDATE member SET credit_balance = ? WHERE phone = ?",
+                                                                    [
+                                                                      creditBalanceHead,
+                                                                      resultAff[0]
+                                                                        .refs_code,
+                                                                    ],
+                                                                    (
+                                                                      error,
+                                                                      resultUpdate,
+                                                                      fields
+                                                                    ) => {
+                                                                      if (error)
+                                                                        throw error;
+                                                                    }
+                                                                  );
                                                                 }
-                                                              );
-                                                            }
+                                                              }
+                                                            );
                                                           }
                                                         );
                                                       }
                                                     );
                                                   }
-                                                );
-                                              }
+                                                }
+                                              );
                                             }
                                           );
+                                          return res.status(200).send({
+                                            status: true,
+                                            msg: "เพิ่มหวยสำเร็จ",
+                                            data: arrClose,
+                                          });
                                         }
                                       );
-                                      return res.status(200).send({
-                                        status: true,
-                                        msg: "เพิ่มหวยสำเร็จ",
-                                        data: arrClose,
-                                      });
                                     }
                                   );
+                                } else {
+                                  return res.status(400).send({
+                                    status: false,
+                                    msg: `จำนวนการแทงวันนี้ครบแล้ว ไม่สามารถแทงได้อีก`,
+                                  });
                                 }
-                              );
+                              } else {
+                                return res.status(400).send({
+                                  status: false,
+                                  msg: `ยอดแทงต้องไม่เกิน ${resultBalance[0].max_limit} / ครั้ง`,
+                                });
+                              }
                             } else {
                               return res.status(400).send({
                                 status: false,
