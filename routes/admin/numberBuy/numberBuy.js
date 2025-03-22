@@ -14,9 +14,10 @@ router.get("/", (req, res) => {
   var date = req.query.date;
   if (lotto_type_id != null && date != null) {
     var sql =
-      "SELECT number, type_option, COUNT(*) as count FROM lotto_number WHERE lotto_type_id = ? AND installment_date = ? GROUP BY number HAVING COUNT(*) > 1 ORDER BY count DESC LIMIT 20";
+      "SELECT number, type_option, COUNT(*) AS count FROM lotto_number WHERE lotto_type_id = ? AND installment_date = ? GROUP BY number, type_option HAVING COUNT(*) > 1 ORDER BY count DESC LIMIT 20;";
     connection.query(sql, [lotto_type_id, date], (error, result, fields) => {
       // if (result != "") {
+      if (error) return console.log(error);
       return res.status(200).send({ status: true, data: result });
       // } else {
       //   return res.status(200).send({ status: false, data: result });
@@ -66,7 +67,7 @@ router.get("/lotto-play-total", (req, res) => {
   var date = req.query.date;
   if (date != null) {
     var sql =
-      "SELECT number, type_option, COUNT(*) AS count, SUM(price) AS total FROM lotto_number WHERE lotto_type_id = ? AND installment_date = ? GROUP BY number, type_option ORDER BY total DESC;";
+      "SELECT number, type_option, COUNT(*) AS count, SUM(price) AS total FROM lotto_number WHERE lotto_type_id = ? AND date_lotto = ? GROUP BY number, type_option ORDER BY total DESC;";
     connection.query(sql, [lotto_type_id, date], (error, result, fields) => {
       return res.status(200).send({ status: true, data: result });
     });
