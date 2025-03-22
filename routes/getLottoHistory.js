@@ -91,7 +91,7 @@ router.get("/", verifyToken, (req, res) => {
                 }
               );
             } else {
-              var sql = `SELECT GROUP_CONCAT(number) as number, lotto_type_id, poy_code, installment_date, (SELECT lotto_type_name FROM lotto_type WHERE lotto_number.lotto_type_id = lotto_type.lotto_type_id) as lotto_type_name FROM lotto_number WHERE created_by = ? GROUP BY poy_code`;
+              var sql = `SELECT GROUP_CONCAT(number ORDER BY number SEPARATOR ', ') AS number, lotto_type_id, poy_code, installment_date, (SELECT lt.lotto_type_name FROM lotto_type lt WHERE lt.lotto_type_id = ln.lotto_type_id LIMIT 1) AS lotto_type_name FROM lotto_number ln WHERE created_by = ? GROUP BY poy_code, lotto_type_id, installment_date;`;
               connection.query(
                 sql,
                 [result[0].id],
@@ -276,7 +276,7 @@ router.get("/group-history", verifyToken, (req, res) => {
               }
             );
           } else {
-            var sql = `SELECT g_id, group_code, created_by, created_at, name, GROUP_CONCAT(number) as number FROM group_number WHERE created_by = ? GROUP BY group_code`;
+            var sql = `SELECT MAX(g_id) AS g_id, group_code, created_by, MAX(created_at) AS created_at, MAX(name) AS name, GROUP_CONCAT(number ORDER BY number SEPARATOR ', ') AS number FROM group_number WHERE created_by = ? GROUP BY group_code, created_by;`;
             connection.query(
               sql,
               [resultMember[0].id],
