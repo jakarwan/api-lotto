@@ -65,10 +65,11 @@ router.get("/lotto-play-total", (req, res) => {
   // if (!err) {
   var lotto_type_id = req.query.lotto_type_id;
   var date = req.query.date;
-  if (date != null) {
+  var endDate = req.query.endDate;
+  if (date != null && endDate != null) {
     var sql =
-      "SELECT number, type_option, COUNT(*) AS count, SUM(price) AS total FROM lotto_number WHERE lotto_type_id = ? AND date_lotto = ? GROUP BY number, type_option ORDER BY total DESC;";
-    connection.query(sql, [lotto_type_id, date], (error, result, fields) => {
+      "SELECT number, type_option, COUNT(*) AS count, SUM(price) AS total FROM lotto_number WHERE lotto_type_id = ? AND date_lotto BETWEEN ? AND ? GROUP BY number, type_option ORDER BY total DESC;";
+    connection.query(sql, [lotto_type_id, date, endDate], (error, result, fields) => {
       return res.status(200).send({ status: true, data: result });
     });
   } else {
