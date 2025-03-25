@@ -14,10 +14,10 @@ function dateChange(d) {
 
 cron.schedule(JOB_SCHEDULE, async () => {
   var sql =
-    "UPDATE lotto_type SET closing_time = DATE_ADD(closing_time, INTERVAL 1 DAY) WHERE lotto_type_name != 'รัฐบาลไทย'";
+    "UPDATE lotto_type SET closing_time = DATE_ADD(closing_time, INTERVAL 1 DAY) WHERE type_id != 2";
   connection.query(sql, (error, result, fields) => {
     var sql =
-      "UPDATE lotto_type SET open = 1 WHERE lotto_type_name != 'รัฐบาลไทย'";
+      "UPDATE lotto_type SET open = 1 WHERE type_id != 2";
     connection.query(sql, (error, result, fields) => {});
     console.log("Update lotto closing time after 02.00");
   });
