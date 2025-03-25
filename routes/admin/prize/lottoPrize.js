@@ -278,6 +278,7 @@ router.post("/add-prize", verifyToken, (req, res) => {
       var type3top = req.body.type3top;
       var type2bottom = req.body.type2bottom;
       var installment = req.body.installment;
+      var prize6digit = req.body.prize6digit;
       if (
         prize3top != "" &&
         prize2bottom != "" &&
@@ -304,11 +305,12 @@ router.post("/add-prize", verifyToken, (req, res) => {
                   (error, resultPrizeToday, fields) => {
                     if (resultPrizeToday == "") {
                       var sql =
-                        "INSERT INTO prize (lotto_type_id, type3top, prize3top, type2bottom, prize2bottom, prize_time, created_by) VALUES(?, ?, ?, ?, ?, ?, ?)";
+                        "INSERT INTO prize (lotto_type_id, prize6digit, type3top, prize3top, type2bottom, prize2bottom, prize_time, created_by) VALUES(?, ?, ?, ?, ?, ?, ?, ?)";
                       connection.query(
                         sql,
                         [
                           lotto_type_id,
+                          prize6digit,
                           type3top,
                           prize3top,
                           type2bottom,
