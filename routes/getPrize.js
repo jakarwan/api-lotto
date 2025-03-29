@@ -32,6 +32,28 @@ function func3back(number) {
   return dup;
 }
 
+function func4back(number) {
+  var textnum = number.toString(); // แปลงตัวเลขเป็น string
+  var result = new Set();
+
+  // ฟังก์ชันหาค่าจัดเรียง (Permutation)
+  function permute(arr, temp = "") {
+    if (arr.length === 0) {
+      result.add(temp); // เพิ่มค่าเข้า Set เพื่อป้องกันค่าซ้ำ
+    } else {
+      for (let i = 0; i < arr.length; i++) {
+        let newArr = arr.slice(0, i).concat(arr.slice(i + 1));
+        permute(newArr, temp + arr[i]);
+      }
+    }
+  }
+
+  // เรียกใช้ฟังก์ชันเพื่อหาค่าจัดเรียงทั้งหมด
+  permute(textnum.split(""));
+
+  return [...result]; // แปลง Set กลับเป็น Array
+}
+
 function dateChange(d) {
   return moment(d).format("YYYY-MM-DD");
 }
@@ -45,9 +67,9 @@ router.get("/", (req, res) => {
     // last query
     //SELECT * FROM Table ORDER BY ID DESC LIMIT 1
     if (lotto_type_id != undefined && date != undefined) {
-      var sql = `SELECT p.prize6digit, p.prize3top, p.prize2bottom, lt.lotto_type_name, lt.lotto_type_id, lt.lotto_type_img, lt.lotto_type_img, p.prize_time FROM prize as p LEFT JOIN lotto_type as lt ON p.lotto_type_id = lt.lotto_type_id WHERE lt.type_id IN ("2") AND p.status = 1 ORDER BY p.prize_time DESC LIMIT 2`;
+      var sql = `SELECT lt.active, p.prize6digit, p.prize3top, p.prize2bottom, lt.lotto_type_name, lt.lotto_type_id, lt.lotto_type_img, lt.lotto_type_img, p.prize_time FROM prize as p LEFT JOIN lotto_type as lt ON p.lotto_type_id = lt.lotto_type_id WHERE lt.type_id IN ("2") AND p.status = 1 ORDER BY p.prize_time DESC LIMIT 2`;
       connection.query(sql, [], (error, resultThai, fields) => {
-        var sql = `SELECT lt.lotto_type_id, lt.type_id, lt.lotto_type_name, lt.lotto_type_img, lt.closing_time, IFNULL(( SELECT p.prize6digit FROM prize as p WHERE p.prize_time = ? AND p.lotto_type_id = lt.lotto_type_id AND p.status = 1 ORDER BY p.prize_id DESC LIMIT 1), 'xxxxxx') AS prize6digit, IFNULL(( SELECT p.prize3top FROM prize as p WHERE p.prize_time = ? AND p.lotto_type_id = lt.lotto_type_id AND p.status = 1 ORDER BY p.prize_id DESC LIMIT 1), 'xxx') AS prize3top, IFNULL(( SELECT p.prize2bottom FROM prize as p WHERE p.prize_time = ? AND p.lotto_type_id = lt.lotto_type_id AND p.status = 1 AND lt.lotto_type_id = ? ORDER BY p.prize_id DESC LIMIT 1), 'xx') AS prize2bottom FROM lotto_type AS lt ORDER BY closing_time ASC`;
+        var sql = `SELECT lt.lotto_type_id, lt.type_id, lt.lotto_type_name, lt.lotto_type_img, lt.closing_time, lt.active, IFNULL(( SELECT p.prize6digit FROM prize as p WHERE p.prize_time = ? AND p.lotto_type_id = lt.lotto_type_id AND p.status = 1 ORDER BY p.prize_id DESC LIMIT 1), 'xxxxxx') AS prize6digit, IFNULL(( SELECT p.prize3top FROM prize as p WHERE p.prize_time = ? AND p.lotto_type_id = lt.lotto_type_id AND p.status = 1 ORDER BY p.prize_id DESC LIMIT 1), 'xxx') AS prize3top, IFNULL(( SELECT p.prize2bottom FROM prize as p WHERE p.prize_time = ? AND p.lotto_type_id = lt.lotto_type_id AND p.status = 1 AND lt.lotto_type_id = ? ORDER BY p.prize_id DESC LIMIT 1), 'xx') AS prize2bottom FROM lotto_type AS lt ORDER BY closing_time ASC`;
         connection.query(
           sql,
           [date, date, lotto_type_id],
@@ -71,9 +93,9 @@ router.get("/", (req, res) => {
         );
       });
     } else if (date != undefined) {
-      var sql = `SELECT p.prize6digit, p.prize3top, p.prize2bottom, lt.lotto_type_name, lt.lotto_type_id, lt.lotto_type_img, lt.lotto_type_img, p.prize_time FROM prize as p LEFT JOIN lotto_type as lt ON p.lotto_type_id = lt.lotto_type_id WHERE lt.type_id IN ("2") AND p.status = 1 ORDER BY p.prize_time DESC LIMIT 2`;
+      var sql = `SELECT lt.active, p.prize6digit, p.prize3top, p.prize2bottom, lt.lotto_type_name, lt.lotto_type_id, lt.lotto_type_img, lt.lotto_type_img, p.prize_time FROM prize as p LEFT JOIN lotto_type as lt ON p.lotto_type_id = lt.lotto_type_id WHERE lt.type_id IN ("2") AND p.status = 1 ORDER BY p.prize_time DESC LIMIT 2`;
       connection.query(sql, [], (error, resultThai, fields) => {
-        var sql = `SELECT lt.lotto_type_id, lt.type_id, lt.lotto_type_name, lt.lotto_type_img, lt.closing_time, IFNULL(( SELECT p.prize6digit FROM prize as p WHERE p.prize_time = ? AND p.lotto_type_id = lt.lotto_type_id AND p.status = 1 ORDER BY p.prize_id DESC LIMIT 1), 'xxxxxx') AS prize6digit, IFNULL(( SELECT p.prize3top FROM prize as p WHERE p.prize_time = ? AND p.lotto_type_id = lt.lotto_type_id AND p.status = 1 ORDER BY p.prize_id DESC LIMIT 1), 'xxx') AS prize3top, IFNULL(( SELECT p.prize2bottom FROM prize as p WHERE p.prize_time = ? AND p.lotto_type_id = lt.lotto_type_id AND p.status = 1 ORDER BY p.prize_id DESC LIMIT 1), 'xx') AS prize2bottom FROM lotto_type AS lt ORDER BY closing_time ASC`;
+        var sql = `SELECT lt.lotto_type_id, lt.type_id, lt.lotto_type_name, lt.lotto_type_img, lt.closing_time, lt.active, IFNULL(( SELECT p.prize6digit FROM prize as p WHERE p.prize_time = ? AND p.lotto_type_id = lt.lotto_type_id AND p.status = 1 ORDER BY p.prize_id DESC LIMIT 1), 'xxxxxx') AS prize6digit, IFNULL(( SELECT p.prize3top FROM prize as p WHERE p.prize_time = ? AND p.lotto_type_id = lt.lotto_type_id AND p.status = 1 ORDER BY p.prize_id DESC LIMIT 1), 'xxx') AS prize3top, IFNULL(( SELECT p.prize2bottom FROM prize as p WHERE p.prize_time = ? AND p.lotto_type_id = lt.lotto_type_id AND p.status = 1 ORDER BY p.prize_id DESC LIMIT 1), 'xx') AS prize2bottom FROM lotto_type AS lt ORDER BY closing_time ASC`;
         connection.query(sql, [date, date, date], (error, result, fields) => {
           console.log(result);
           try {
@@ -464,6 +486,104 @@ router.get("/lotto-results", verifyToken, (req, res) => {
                                 );
                               }
                               // console.log("ถูก 2 ตัว");
+                            } else if (
+                              item.type_option === "4 ตัวบน" &&
+                              dateChange(item.installment_date) ===
+                                installment &&
+                              resultPrize[0].prize6digit != null
+                            ) {
+                              if (
+                                item.number ===
+                                resultPrize[0].prize6digit.slice(2)
+                              ) {
+                                connection.query(
+                                  sqlUpdate,
+                                  [item.lotto_number_id],
+                                  (error, result, fields) => {}
+                                );
+
+                                var sql =
+                                  "INSERT INTO prize_log (lotto_type_id, lotto_date, created_by, total, submit_by, poy_code) VALUES(?, ?, ?, ?, ?, ?)";
+                                let total = 0;
+                                total = item.price * item.pay;
+                                connection.query(
+                                  sql,
+                                  [
+                                    item.lotto_type_id,
+                                    installment,
+                                    item.created_by,
+                                    total,
+                                    data.user.id,
+                                    item.poy_code,
+                                  ],
+                                  (error, result, fields) => {}
+                                );
+                                //   }
+                                // );
+                              } else {
+                                connection.query(
+                                  `UPDATE lotto_number SET status = 'fail' WHERE lotto_type_id = ? AND lotto_number_id = ? AND status = ?`,
+                                  [
+                                    item.lotto_type_id,
+                                    item.lotto_number_id,
+                                    "wait",
+                                  ],
+                                  (error, result, fields) => {}
+                                );
+                              }
+                            } else if (
+                              item.type_option === "4 ตัวโต๊ด" &&
+                              dateChange(item.installment_date) ===
+                                installment &&
+                              resultPrize[0].prize6digit != null
+                            ) {
+                              const result = func4back(
+                                resultPrize[0].prize6digit.slice(2)
+                              );
+                              console.log(result,'4back')
+                              if (result.some(num => num.includes(item.number))) {
+                                // console.log(item.number, "ถูก 3 ตัวโต๊ด");
+                                connection.query(
+                                  sqlUpdate,
+                                  [item.lotto_number_id],
+                                  (error, result, fields) => {}
+                                );
+
+                                // connection.query(
+                                //   `UPDATE prize SET status = 1 WHERE prize_id = ?`,
+                                //   [resultPrize[0].prize_id],
+                                //   (error, result, fields) => {
+                                //
+                                var sql =
+                                  "INSERT INTO prize_log (lotto_type_id, lotto_date, created_by, total, submit_by, poy_code) VALUES(?, ?, ?, ?, ?, ?)";
+                                let total = 0;
+                                total = item.price * item.pay;
+                                connection.query(
+                                  sql,
+                                  [
+                                    item.lotto_type_id,
+                                    installment,
+                                    item.created_by,
+                                    total,
+                                    data.user.id,
+                                    item.poy_code,
+                                  ],
+                                  (error, result, fields) => {}
+                                );
+                                //   }
+                                // );
+                              } else {
+                                connection.query(
+                                  `UPDATE lotto_number SET status = 'fail' WHERE lotto_type_id = ? AND lotto_number_id = ? AND status = ?`,
+                                  [
+                                    item.lotto_type_id,
+                                    item.lotto_number_id,
+                                    "wait",
+                                  ],
+                                  (error, result, fields) => {}
+                                );
+                                // console.log(item.number, "ไม่ถูก 3 ตัว");
+                              }
                             } else {
                               connection.query(
                                 `UPDATE lotto_number SET status = 'fail' WHERE lotto_type_id = ? AND lotto_number_id = ? AND status = ?`,
