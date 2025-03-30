@@ -273,7 +273,7 @@ router.post(
         if (req.body.name != null && req.file != null) {
           const { filename: image } = req.file;
           const filePath =
-            reqhttps + "://" + req.get('host') + "/" + "api/images/" + image;
+            reqhttps + "://" + req.get("host") + "/" + "api/images/" + image;
           // const filePath = "http://localhost:3000/uploads/" + image;
           var sql =
             "INSERT INTO lotto_type (lotto_type_name, lotto_type_img, type_id, closing_time) VALUES(?, ?, ?, ?)";
@@ -340,7 +340,7 @@ router.put(
         //   req.file.filename;
         // const host = req.hostname;
         const name = req.body.name;
-        const hostname = req.get('host');
+        const hostname = req.get("host");
         const reqhttps = "https";
         //   const lotto_type_img = req.file;
         const lotto_type_id = req.body.lotto_type_id;
@@ -387,8 +387,7 @@ router.put(
                 });
               }
             );
-            if (close_date != null) {
-              // console.log(close_date);
+            if (close_date.length > 0) {
               close_date.forEach((item) => {
                 // console.log(item);
                 sql =
@@ -397,7 +396,7 @@ router.put(
                   sql,
                   [lotto_type_id, item],
                   (error, resultCloseDate, fields) => {
-                    // console.log(resultCloseDate);
+                    console.log(error);
                     // if (resultCloseDate.indexOf(item) != -1) {
                     //   sql =
                     //     "UPDATE close_lotto SET active = ? WHERE lotto_type_id = ? AND c_day = ?";
@@ -497,6 +496,13 @@ router.put(
                   }
                 );
               });
+            } else {
+              sql = "UPDATE close_lotto SET active = 0 WHERE lotto_type_id = ?";
+              connection.query(
+                sql,
+                [lotto_type_id],
+                (error, resultClose, fields) => {}
+              );
             }
           }
         } else {
