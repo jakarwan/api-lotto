@@ -83,8 +83,8 @@ router.get("/prize-result", verifyToken, (req, res) => {
             if (result === undefined) {
               return res.status(400).send({ status: false });
             } else {
-              // const data = paginatedResults(req, res, result);
-              return res.status(200).send({ status: true, data: result });
+              const data = paginatedResults(req, res, result);
+              return res.status(200).send({ status: true, data });
             }
           }
         );
@@ -133,8 +133,8 @@ ORDER BY MAX(lt.closing_time) DESC`;
             if (result === undefined) {
               return res.status(400).send({ status: false });
             } else {
-              // const data = paginatedResults(req, res, result);
-              return res.status(200).send({ status: true, data: result });
+              const data = paginatedResults(req, res, result);
+              return res.status(200).send({ status: true, data });
             }
           }
         );
@@ -157,7 +157,8 @@ ORDER BY MAX(lt.closing_time) DESC`;
                   return el;
                 }
               });
-              return res.status(200).send({ status: true, data: total });
+              const data = paginatedResults(req, res, total);
+              return res.status(200).send({ status: true, data });
             }
           }
         );
@@ -173,8 +174,8 @@ ORDER BY MAX(lt.closing_time) DESC`;
               if (result === undefined) {
                 return res.status(400).send({ status: false, msg: error });
               } else {
-                // const data = paginatedResults(req, res, result);
-                return res.status(200).send({ status: true, data: result });
+                const data = paginatedResults(req, res, result);
+                return res.status(200).send({ status: true, data });
               }
             }
           );
@@ -250,6 +251,7 @@ router.post("/add-prize", verifyToken, (req, res) => {
       var type2bottom = req.body.type2bottom;
       var installment = req.body.installment;
       var prize6digit = req.body.prize6digit;
+      var prize3bottom = JSON.stringify(req.body.prize3bottom);
       if (
         prize3top != "" &&
         prize2bottom != "" &&
@@ -258,7 +260,7 @@ router.post("/add-prize", verifyToken, (req, res) => {
         type2bottom != "" &&
         installment != ""
       ) {
-        if (!isNaN(prize3top) && !isNaN(prize2bottom)) {
+        if (!isNaN(prize3top) && !isNaN(prize2bottom) && !isNaN(prize6digit)) {
           var sql = "SELECT * FROM lotto_type WHERE lotto_type_id = ?";
           connection.query(
             sql,
@@ -275,24 +277,41 @@ router.post("/add-prize", verifyToken, (req, res) => {
                   [lotto_type_id, installment],
                   (error, resultPrizeToday, fields) => {
                     if (resultPrizeToday == "") {
-                      var sql =
-                        "INSERT INTO prize (lotto_type_id, prize6digit, type3top, prize3top, type2bottom, prize2bottom, prize_time, created_by) VALUES(?, ?, ?, ?, ?, ?, ?, ?)";
+                      var sql = `SELECT * FROM lotto_type WHERE lotto_type_id = ? AND closing_time <= NOW();`;
                       connection.query(
                         sql,
-                        [
-                          lotto_type_id,
-                          prize6digit,
-                          type3top,
-                          prize3top,
-                          type2bottom,
-                          prize2bottom,
-                          installment,
-                          data.user.id,
-                        ],
-                        (error, result, fields) => {
-                          return res
-                            .status(200)
-                            .send({ status: false, msg: "เพิ่มผลหวยสำเร็จ" });
+                        [lotto_type_id],
+                        (error, resultChkPrizeTime, fields) => {
+                          if (resultChkPrizeTime.length > 0) {
+                            var sql =
+                              "INSERT INTO prize (lotto_type_id, prize6digit, prize3bottom, type3top, prize3top, type2bottom, prize2bottom, prize_time, created_by) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                            connection.query(
+                              sql,
+                              [
+                                lotto_type_id,
+                                prize6digit,
+                                prize3bottom,
+                                type3top,
+                                prize3top,
+                                type2bottom,
+                                prize2bottom,
+                                installment,
+                                data.user.id,
+                              ],
+                              (error, result, fields) => {
+                                if (error) return console.log(error);
+                                return res.status(200).send({
+                                  status: false,
+                                  msg: "เพิ่มผลหวยสำเร็จ",
+                                });
+                              }
+                            );
+                          } else {
+                            return res.status(400).send({
+                              status: false,
+                              msg: "หวยนี้ยังไม่ถึงเวลาออกผล",
+                            });
+                          }
                         }
                       );
                     } else {
