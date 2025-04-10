@@ -617,7 +617,7 @@ router.get("/lotto-results", verifyToken, (req, res) => {
                                 // console.log(item.number, "ไม่ถูก 3 ตัว");
                               }
                             } else if (
-                              item.type_option === "3 ตัวหน้า" &&
+                              item.type_option === "3 ตัวล่าง" &&
                               dateChange(item.installment_date) === installment
                               // && resultPrize[0].prize3bottom != null
                             ) {
@@ -625,56 +625,13 @@ router.get("/lotto-results", verifyToken, (req, res) => {
                                 JSON.parse(resultPrize[0].prize3bottom).find(
                                   (item) => item.prize3front
                                 )?.prize3front || [];
-                              if (
-                                item.number === prize3front[0] ||
-                                item.number === prize3front[1]
-                              ) {
-                                connection.query(
-                                  sqlUpdate,
-                                  [item.lotto_number_id],
-                                  (error, result, fields) => {}
-                                );
-
-                                var sql =
-                                  "INSERT INTO prize_log (lotto_type_id, lotto_date, created_by, total, submit_by, poy_code) VALUES(?, ?, ?, ?, ?, ?)";
-                                let total = 0;
-                                total = item.price * item.pay;
-                                connection.query(
-                                  sql,
-                                  [
-                                    item.lotto_type_id,
-                                    installment,
-                                    item.created_by,
-                                    total,
-                                    data.user.id,
-                                    item.poy_code,
-                                  ],
-                                  (error, result, fields) => {}
-                                );
-                                //   }
-                                // );
-                              } else {
-                                connection.query(
-                                  `UPDATE lotto_number SET status = 'fail' WHERE lotto_type_id = ? AND lotto_number_id = ? AND status = ?`,
-                                  [
-                                    item.lotto_type_id,
-                                    item.lotto_number_id,
-                                    "wait",
-                                  ],
-                                  (error, result, fields) => {}
-                                );
-                              }
-                            } else if (
-                              item.type_option === "3 ตัวหลัง" &&
-                              dateChange(item.installment_date) === installment
-                              // && resultPrize[0].prize3bottom != null
-                            ) {
                               const prize3after =
                                 JSON.parse(resultPrize[0].prize3bottom).find(
                                   (item) => item.prize3after
                                 )?.prize3after || [];
-                              console.log(prize3after, "prize3after");
                               if (
+                                item.number === prize3front[0] ||
+                                item.number === prize3front[1] ||
                                 item.number === prize3after[0] ||
                                 item.number === prize3after[1]
                               ) {
@@ -724,6 +681,56 @@ router.get("/lotto-results", verifyToken, (req, res) => {
                                 (error, result, fields) => {}
                               );
                             }
+                            //  else if (
+                            //   item.type_option === "3 ตัวหลัง" &&
+                            //   dateChange(item.installment_date) === installment
+                            //   // && resultPrize[0].prize3bottom != null
+                            // ) {
+                            //   const prize3after =
+                            //     JSON.parse(resultPrize[0].prize3bottom).find(
+                            //       (item) => item.prize3after
+                            //     )?.prize3after || [];
+                            //   console.log(prize3after, "prize3after");
+                            //   if (
+                            //     item.number === prize3after[0] ||
+                            //     item.number === prize3after[1]
+                            //   ) {
+                            //     connection.query(
+                            //       sqlUpdate,
+                            //       [item.lotto_number_id],
+                            //       (error, result, fields) => {}
+                            //     );
+
+                            //     var sql =
+                            //       "INSERT INTO prize_log (lotto_type_id, lotto_date, created_by, total, submit_by, poy_code) VALUES(?, ?, ?, ?, ?, ?)";
+                            //     let total = 0;
+                            //     total = item.price * item.pay;
+                            //     connection.query(
+                            //       sql,
+                            //       [
+                            //         item.lotto_type_id,
+                            //         installment,
+                            //         item.created_by,
+                            //         total,
+                            //         data.user.id,
+                            //         item.poy_code,
+                            //       ],
+                            //       (error, result, fields) => {}
+                            //     );
+                            //     //   }
+                            //     // );
+                            //   } else {
+                            //     connection.query(
+                            //       `UPDATE lotto_number SET status = 'fail' WHERE lotto_type_id = ? AND lotto_number_id = ? AND status = ?`,
+                            //       [
+                            //         item.lotto_type_id,
+                            //         item.lotto_number_id,
+                            //         "wait",
+                            //       ],
+                            //       (error, result, fields) => {}
+                            //     );
+                            //   }
+                            // }
                           });
                           connection.query(
                             `UPDATE poy SET status_result = ? WHERE lotto_type_id = ? AND installment_date = ?`,
