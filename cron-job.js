@@ -866,8 +866,8 @@ async function getPrize() {
                       const updateStatusPoy = (item) => {
                         return new Promise((resolve, reject) => {
                           connection.query(
-                            `UPDATE poy SET status_result = ? WHERE lotto_type_id = ? AND poy_code = ? AND DATE(created_at) = CURDATE();`,
-                            [1, item.lotto_type_id, item.poy_code],
+                            `UPDATE poy SET status_result = ? WHERE lotto_type_id = ? AND installment_date = CURDATE();`,
+                            [1, item.lotto_type_id],
                             (error) => {
                               if (error) return reject(error);
                               resolve();
