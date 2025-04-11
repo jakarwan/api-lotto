@@ -196,6 +196,28 @@ function func3back(number) {
   return dup;
 }
 
+function func4back(number) {
+  var textnum = number.toString(); // แปลงตัวเลขเป็น string
+  var result = new Set();
+
+  // ฟังก์ชันหาค่าจัดเรียง (Permutation)
+  function permute(arr, temp = "") {
+    if (arr.length === 0) {
+      result.add(temp); // เพิ่มค่าเข้า Set เพื่อป้องกันค่าซ้ำ
+    } else {
+      for (let i = 0; i < arr.length; i++) {
+        let newArr = arr.slice(0, i).concat(arr.slice(i + 1));
+        permute(newArr, temp + arr[i]);
+      }
+    }
+  }
+
+  // เรียกใช้ฟังก์ชันเพื่อหาค่าจัดเรียงทั้งหมด
+  permute(textnum.split(""));
+
+  return [...result]; // แปลง Set กลับเป็น Array
+}
+
 // cron.schedule("*/1 * * * *", () => {
 //   // console.log("Run task every minute");
 //   var sql =
@@ -684,7 +706,23 @@ const rules = {
     func3back(prize.prize3top).includes(item.number),
   "3 ตัวบน": (item, prize) =>
     parseInt(item.number) === parseInt(prize.prize3top),
+  "3 ตัวล่าง": (item, prize) => {
+    const prize3front =
+      prize.prize3bottom.find((p) => p.prize3front)?.prize3front || [];
+    const prize3after =
+      prize.prize3bottom.find((p) => p.prize3after)?.prize3after || [];
+    return (
+      item.number === prize3front[0] ||
+      item.number === prize3front[1] ||
+      item.number === prize3after[0] ||
+      item.number === prize3after[1]
+    );
+  },
   "2 ตัวล่าง": (item, prize) => item.number === prize.prize2bottom,
+  "4 ตัวโต๊ด": (item, prize) =>
+    func4back(prize.prize6digit.slice(2)).includes(item.number),
+  "4 ตัวบน": (item, prize) =>
+    parseInt(item.number) === parseInt(prize.prize6digit.slice(2)),
 };
 
 async function getPrize() {
@@ -782,23 +820,36 @@ async function getPrize() {
                       const updateSuccess = (item) => {
                         return new Promise((resolve, reject) => {
                           const sqlUpdate = `UPDATE lotto_number SET status = 'suc' WHERE lotto_number_id = ? AND status_poy = 'SUC' AND status = 'wait'`;
-                          connection.query(sqlUpdate, [item.lotto_number_id], (error) => {
-                            if (error) return reject(error);
-                            resolve();
-                          });
+                          connection.query(
+                            sqlUpdate,
+                            [item.lotto_number_id],
+                            (error) => {
+                              if (error) return reject(error);
+                              resolve();
+                            }
+                          );
                         });
                       };
-                      
+
                       const insertPrizeLog = (item, total) => {
                         return new Promise((resolve, reject) => {
                           const sql = `INSERT INTO prize_log (lotto_type_id, created_at, created_by, total, poy_code) VALUES (?, NOW(), ?, ?, ?)`;
-                          connection.query(sql, [item.lotto_type_id, item.created_by, total, item.poy_code], (error) => {
-                            if (error) return reject(error);
-                            resolve();
-                          });
+                          connection.query(
+                            sql,
+                            [
+                              item.lotto_type_id,
+                              item.created_by,
+                              total,
+                              item.poy_code,
+                            ],
+                            (error) => {
+                              if (error) return reject(error);
+                              resolve();
+                            }
+                          );
                         });
                       };
-                      
+
                       const updateFail = (item) => {
                         return new Promise((resolve, reject) => {
                           connection.query(
@@ -811,7 +862,7 @@ async function getPrize() {
                           );
                         });
                       };
-                      
+
                       const updateStatusPoy = (item) => {
                         return new Promise((resolve, reject) => {
                           connection.query(
@@ -824,7 +875,7 @@ async function getPrize() {
                           );
                         });
                       };
-                      
+
                       const updateStatusPrize = (prize) => {
                         return new Promise((resolve, reject) => {
                           const sql = `UPDATE prize SET status = 1 WHERE prize_id = ?`;
@@ -834,73 +885,96 @@ async function getPrize() {
                           });
                         });
                       };
-                      
+
                       const processLotto = async () => {
                         try {
-                          const [resultPrize] = await connection.promise().query(
-                            "SELECT * FROM prize WHERE lotto_type_id = ? AND prize_time = ? AND status = 0",
-                            [queryLottoClose.lotto_type_id, dateNow2]
-                          );
-                      
-                          if (resultPrize.length === 0) return
-                      
-                          const [resultLotto] = await connection.promise().query(
-                            `SELECT ln.* FROM lotto_number as ln 
+                          const [resultPrize] = await connection
+                            .promise()
+                            .query(
+                              "SELECT * FROM prize WHERE lotto_type_id = ? AND prize_time = ? AND status = 0",
+                              [queryLottoClose.lotto_type_id, dateNow2]
+                            );
+
+                          if (resultPrize.length === 0) return;
+
+                          const [resultLotto] = await connection
+                            .promise()
+                            .query(
+                              `SELECT ln.* FROM lotto_number as ln 
                             LEFT JOIN lotto_type as lt ON ln.lotto_type_id = lt.lotto_type_id 
                             LEFT JOIN member as mb ON ln.created_by = mb.id 
                             WHERE ln.lotto_type_id = ? AND ln.status_poy = 'SUC' AND ln.installment_date = DATE(lt.closing_time);`,
-                            [queryLottoClose.lotto_type_id]
-                          );
-                      
+                              [queryLottoClose.lotto_type_id]
+                            );
+
                           await updateStatusPrize(resultPrize[0]);
-                      
+
                           for (const item of resultLotto) {
-                            const date = moment(item.installment_date, "YYYY-MM-DD");
-                            const formattedDate = date.format("DD/MM") + "/" + (date.year() + 543).toString().slice(-2);
-                            const dateRegex = el.periodName.match(/\d{2}\/\d{2}\/\d{2}/)[0];
+                            const date = moment(
+                              item.installment_date,
+                              "YYYY-MM-DD"
+                            );
+                            const formattedDate =
+                              date.format("DD/MM") +
+                              "/" +
+                              (date.year() + 543).toString().slice(-2);
+                            const dateRegex =
+                              el.periodName.match(/\d{2}\/\d{2}\/\d{2}/)[0];
                             if (formattedDate !== dateRegex) continue;
-                      
+
                             const checkRule = rules[item.type_option];
                             if (!checkRule) continue;
-                      
-                            const isWin = resultPrize.some((prize) => checkRule(item, prize));
-                      
+
+                            const isWin = resultPrize.some((prize) =>
+                              checkRule(item, prize)
+                            );
+
                             if (isWin) {
                               await updateSuccess(item);
                               const total = item.price * item.pay;
                               await insertPrizeLog(item, total);
                               await updateStatusPoy(item);
-                      
-                              const [resultPrizeLog] = await connection.promise().query(
-                                `SELECT SUM(total * pay) as total, created_by FROM lotto_number WHERE installment_date = CURDATE() AND lotto_type_id = ? AND status = 'suc' GROUP BY created_by`,
-                                [queryLottoClose.lotto_type_id]
-                              );
-                      
-                              for (const prizeItem of resultPrizeLog) {
-                                const [resultCredit] = await connection.promise().query(
-                                  `SELECT credit_balance FROM member WHERE id = ?`,
-                                  [prizeItem.created_by]
+
+                              const [resultPrizeLog] = await connection
+                                .promise()
+                                .query(
+                                  `SELECT SUM(total * pay) as total, created_by FROM lotto_number WHERE installment_date = CURDATE() AND lotto_type_id = ? AND status = 'suc' GROUP BY created_by`,
+                                  [queryLottoClose.lotto_type_id]
                                 );
-                      
+
+                              for (const prizeItem of resultPrizeLog) {
+                                const [resultCredit] = await connection
+                                  .promise()
+                                  .query(
+                                    `SELECT credit_balance FROM member WHERE id = ?`,
+                                    [prizeItem.created_by]
+                                  );
+
                                 if (resultCredit.length > 0) {
-                                  const totalCredit = parseFloat(resultCredit[0].credit_balance) + parseFloat(prizeItem.total);
-                                  await connection.promise().query(
-                                    `UPDATE member SET credit_balance = ? WHERE id = ?`,
-                                    [totalCredit, prizeItem.created_by]
-                                  );
-                      
-                                  await connection.promise().query(
-                                    `INSERT INTO credit_log (credit_previous, credit_after, created_by, lotto_type_id, installment, prize) VALUES (?, ?, ?, ?, ?, ?)`,
-                                    [
-                                      resultCredit[0].credit_balance,
-                                      totalCredit,
-                                      prizeItem.created_by,
-                                      queryLottoClose.lotto_type_id,
-                                      dateNow,
-                                      prizeItem.total,
-                                    ]
-                                  );
-                      
+                                  const totalCredit =
+                                    parseFloat(resultCredit[0].credit_balance) +
+                                    parseFloat(prizeItem.total);
+                                  await connection
+                                    .promise()
+                                    .query(
+                                      `UPDATE member SET credit_balance = ? WHERE id = ?`,
+                                      [totalCredit, prizeItem.created_by]
+                                    );
+
+                                  await connection
+                                    .promise()
+                                    .query(
+                                      `INSERT INTO credit_log (credit_previous, credit_after, created_by, lotto_type_id, installment, prize) VALUES (?, ?, ?, ?, ?, ?)`,
+                                      [
+                                        resultCredit[0].credit_balance,
+                                        totalCredit,
+                                        prizeItem.created_by,
+                                        queryLottoClose.lotto_type_id,
+                                        dateNow,
+                                        prizeItem.total,
+                                      ]
+                                    );
+
                                   console.log(`เพิ่มเครดิตถูกหวยสำเร็จ`);
                                 }
                               }
@@ -908,15 +982,14 @@ async function getPrize() {
                               await updateFail(item);
                             }
                           }
-                      
+
                           // console.log("ประมวลผลเรียบร้อย");
                         } catch (error) {
                           console.error("เกิดข้อผิดพลาด:", error);
                         }
                       };
-                      
+
                       processLotto();
-                      
                     }
                   }
                 );
