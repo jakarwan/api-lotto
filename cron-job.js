@@ -833,7 +833,7 @@ async function getPrize() {
 
                       const insertPrizeLog = (item, total) => {
                         return new Promise((resolve, reject) => {
-                          const sql = `INSERT INTO prize_log (lotto_type_id, created_at, created_by, total, poy_code) VALUES (?, NOW(), ?, ?, ?)`;
+                          const sql = `INSERT INTO prize_log (lotto_type_id, lotto_date, created_by, total, poy_code) VALUES (?, NOW(), ?, ?, ?)`;
                           connection.query(
                             sql,
                             [
