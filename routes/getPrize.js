@@ -621,12 +621,16 @@ router.get("/lotto-results", verifyToken, (req, res) => {
                               dateChange(item.installment_date) === installment
                               // && resultPrize[0].prize3bottom != null
                             ) {
+                              console.log(
+                                resultPrize[0].prize3bottom,
+                                "resultPrize[0].prize3bottom"
+                              );
                               const prize3front =
-                                JSON.parse(resultPrize[0].prize3bottom).find(
+                                resultPrize[0].prize3bottom.find(
                                   (item) => item.prize3front
                                 )?.prize3front || [];
                               const prize3after =
-                                JSON.parse(resultPrize[0].prize3bottom).find(
+                                resultPrize[0].prize3bottom.find(
                                   (item) => item.prize3after
                                 )?.prize3after || [];
                               if (
