@@ -132,7 +132,15 @@ router.get("/log-daily", verifyToken, (req, res) => {
             return res.status(400).send({ status: false });
           } else {
             console.log(result[0].id);
-            var sql = `SELECT IFNULL(SUM(total), 0) as sum_total, IFNULL(SUM(total_aff), 0) as sum_total_aff, m_id_header, m_id_user, created_at FROM aff_log_daily WHERE m_id_header = ? GROUP BY DATE_FORMAT(created_at, "%Y-%m-%d");`;
+            var sql = `SELECT 
+  IFNULL(SUM(total), 0) AS sum_total, 
+  IFNULL(SUM(total_aff), 0) AS sum_total_aff, 
+  m_id_header, 
+  MAX(m_id_user) AS m_id_user, 
+  DATE(created_at) AS created_date
+FROM aff_log_daily 
+WHERE m_id_header = ? 
+GROUP BY DATE(created_at);`;
             connection.query(
               sql,
               [result[0].id],
