@@ -147,7 +147,7 @@ cron.schedule("*/1 * * * *", () => {
     console.log("Update lotto time every 1 minute");
   });
   // getdata();
-  getPrize();
+  // getPrize();
   function countDown(date, id) {
     if (date != null && id != null) {
       var dd = moment(new Date(date)).format("YYYY-MM-DD HH:mm:ss");
