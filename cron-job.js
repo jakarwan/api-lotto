@@ -5,12 +5,6 @@ const connection = require("./config/connection");
 const moment = require("moment");
 const axios = require("axios");
 const { updatePlayLimitMembers } = require("./routes/sql/lottoNumber");
-var LocalStorage = require("node-localstorage").LocalStorage,
-  localStorage = new LocalStorage("./scratch");
-
-function dateChange(d) {
-  return moment(d).format("YYYY-MM-DD");
-}
 
 cron.schedule(JOB_SCHEDULE, async () => {
   var sql =
@@ -97,27 +91,6 @@ cron.schedule("55 23 * * *", () => {
   });
 });
 
-async function lottoNotify(lotto_name, prize) {
-  const result = await axios({
-    method: "post",
-    url: "https://notify-api.line.me/api/notify",
-    headers: {
-      "Content-Type": "application/x-www-form-urlencoded",
-      Authorization: `Bearer MolSYRMWl4X5WLmq0xxLDWNjYUY62Pqbj5m7YtERqET`,
-    },
-    data: `message=${lotto_name} \n
-    3 ตัวบน: ${prize.prize3top}\n
-    2 ตัวล่าง: ${prize.prize2bottom}\n
-    `,
-  })
-    .then((response) => {
-      // console.log(response);
-    })
-    .catch((err) => {
-      console.log(err);
-    });
-}
-
 cron.schedule("*/1 * * * *", () => {
   var dateTh = moment(new Date()).locale("th").format("dddd");
   var sqlQueryCloseDate =
@@ -147,7 +120,7 @@ cron.schedule("*/1 * * * *", () => {
     console.log("Update lotto time every 1 minute");
   });
   // getdata();
-  // getPrize();
+  getPrize();
   function countDown(date, id) {
     if (date != null && id != null) {
       var dd = moment(new Date(date)).format("YYYY-MM-DD HH:mm:ss");
@@ -269,6 +242,7 @@ function func4back(number) {
 //       },
 //     })
 //     .then((response) => {
+//       // console.log(response.data.result);
 //       if (response.data.status) {
 //         var sql = "SELECT * FROM lotto_type WHERE open = 0 AND active = 1";
 //         connection.query(sql, (error, result, fields) => {
@@ -304,6 +278,9 @@ function func4back(number) {
 //                           var award3top = el.top3;
 //                           var type3top = "3 ตัวบน";
 //                           var type2bottom = "2 ตัวล่าง";
+//                           // if (el.award1.length > 3) {
+//                           //   award3top = el.award1.substr(3, 6);
+//                           // }
 //                           var sql =
 //                             "INSERT INTO prize (lotto_type_id, type3top, prize3top, type2bottom, prize2bottom, prize_time) VALUES(?, ?, ?, ?, ?, ?)";
 //                           connection.query(
@@ -344,6 +321,12 @@ function func4back(number) {
 //                                       [item.lotto_number_id],
 //                                       (error, result, fields) => {}
 //                                     );
+
+//                                     // connection.query(
+//                                     //   `UPDATE prize SET status = 1 WHERE prize_id = ?`,
+//                                     //   [resultPrize[0].prize_id],
+//                                     //   (error, result, fields) => {
+//                                     //
 //                                     var sql =
 //                                       "INSERT INTO prize_log (lotto_type_id, lotto_date, created_by, total, poy_code) VALUES(?, ?, ?, ?, ?)";
 //                                     let total = 0;
@@ -359,6 +342,8 @@ function func4back(number) {
 //                                       ],
 //                                       (error, result, fields) => {}
 //                                     );
+//                                     //   }
+//                                     // );
 //                                   } else {
 //                                     connection.query(
 //                                       `UPDATE lotto_number SET status = 'fail' WHERE lotto_type_id = ? AND lotto_number_id = ? AND status = ?`,
@@ -385,6 +370,12 @@ function func4back(number) {
 //                                       [item.lotto_number_id],
 //                                       (error, result, fields) => {}
 //                                     );
+
+//                                     // connection.query(
+//                                     //   `UPDATE prize SET status = 1 WHERE prize_id = ?`,
+//                                     //   [resultPrize[0].prize_id],
+//                                     //   (error, result, fields) => {
+//                                     //
 //                                     var sql =
 //                                       "INSERT INTO prize_log (lotto_type_id, lotto_date, created_by, total, poy_code) VALUES(?, ?, ?, ?, ?)";
 //                                     let total = 0;
@@ -400,6 +391,8 @@ function func4back(number) {
 //                                       ],
 //                                       (error, result, fields) => {}
 //                                     );
+//                                     //   }
+//                                     // );
 //                                   } else {
 //                                     connection.query(
 //                                       `UPDATE lotto_number SET status = 'fail' WHERE lotto_type_id = ? AND lotto_number_id = ? AND status = ?`,
@@ -427,6 +420,12 @@ function func4back(number) {
 //                                       [item.lotto_number_id],
 //                                       (error, result, fields) => {}
 //                                     );
+
+//                                     // connection.query(
+//                                     //   `UPDATE prize SET status = 1 WHERE prize_id = ?`,
+//                                     //   [resultPrize[0].prize_id],
+//                                     //   (error, result, fields) => {
+//                                     //
 //                                     var sql =
 //                                       "INSERT INTO prize_log (lotto_type_id, lotto_date, created_by, total, poy_code) VALUES(?, ?, ?, ?, ?)";
 //                                     let total = 0;
@@ -442,6 +441,8 @@ function func4back(number) {
 //                                       ],
 //                                       (error, result, fields) => {}
 //                                     );
+//                                     //   }
+//                                     // );
 //                                   } else {
 //                                     connection.query(
 //                                       `UPDATE lotto_number SET status = 'fail' WHERE lotto_type_id = ? AND lotto_number_id = ? AND status = ?`,
@@ -461,11 +462,18 @@ function func4back(number) {
 //                                     resultPrize[0].prize3top
 //                                   );
 //                                   if (result.indexOf(item.number) != -1) {
+//                                     // console.log(item.number, "ถูก 3 ตัวโต๊ด");
 //                                     connection.query(
 //                                       sqlUpdate,
 //                                       [item.lotto_number_id],
 //                                       (error, result, fields) => {}
 //                                     );
+
+//                                     // connection.query(
+//                                     //   `UPDATE prize SET status = 1 WHERE prize_id = ?`,
+//                                     //   [resultPrize[0].prize_id],
+//                                     //   (error, result, fields) => {
+//                                     //
 //                                     var sql =
 //                                       "INSERT INTO prize_log (lotto_type_id, lotto_date, created_by, total, poy_code) VALUES(?, ?, ?, ?, ?)";
 //                                     let total = 0;
@@ -481,6 +489,8 @@ function func4back(number) {
 //                                       ],
 //                                       (error, result, fields) => {}
 //                                     );
+//                                     //   }
+//                                     // );
 //                                   } else {
 //                                     connection.query(
 //                                       `UPDATE lotto_number SET status = 'fail' WHERE lotto_type_id = ? AND lotto_number_id = ? AND status = ?`,
@@ -491,6 +501,7 @@ function func4back(number) {
 //                                       ],
 //                                       (error, result, fields) => {}
 //                                     );
+//                                     // console.log(item.number, "ไม่ถูก 3 ตัว");
 //                                   }
 //                                 } else if (
 //                                   item.type_option === "3 ตัวบน" &&
@@ -521,6 +532,8 @@ function func4back(number) {
 //                                       ],
 //                                       (error, result, fields) => {}
 //                                     );
+//                                     //   }
+//                                     // );
 //                                   } else {
 //                                     connection.query(
 //                                       `UPDATE lotto_number SET status = 'fail' WHERE lotto_type_id = ? AND lotto_number_id = ? AND status = ?`,
@@ -560,6 +573,8 @@ function func4back(number) {
 //                                       ],
 //                                       (error, result, fields) => {}
 //                                     );
+//                                     //   }
+//                                     // );
 //                                   } else {
 //                                     connection.query(
 //                                       `UPDATE lotto_number SET status = 'fail' WHERE lotto_type_id = ? AND lotto_number_id = ? AND status = ?`,
@@ -589,6 +604,10 @@ function func4back(number) {
 //                                 `UPDATE prize SET status = 1 WHERE prize_id = ?`,
 //                                 [resultPrize[0].prize_id],
 //                                 (error, result, fields) => {
+//                                   // return res.status(200).send({
+//                                   //   status: true,
+//                                   //   msg: "อัพเดทออกผลหวยสำเร็จ",
+//                                   // });
 //                                   var sql = `SELECT SUM(total * pay) as total, created_by FROM lotto_number WHERE installment_date = ? AND lotto_type_id = ? AND status = 'suc' GROUP BY created_by`;
 //                                   connection.query(
 //                                     sql,
@@ -633,6 +652,10 @@ function func4back(number) {
 //                                       });
 //                                     }
 //                                   );
+//                                   // lottoNotify(
+//                                   //   rs.lotto_type_name,
+//                                   //   resultPrize[0]
+//                                   // );
 //                                   console.log(
 //                                     `อัพเดทออกผลหวย ${rs.lotto_type_name} สำเร็จ`
 //                                   );
@@ -655,46 +678,6 @@ function func4back(number) {
 //       console.log(error);
 //     });
 // }
-
-// getPrize();
-
-// const updateSuccess = (item) => {
-//   var sqlUpdate = `UPDATE lotto_number SET status = 'suc' WHERE lotto_number_id = ? AND status_poy = 'SUC' AND status = 'wait'`;
-//   connection.query(sqlUpdate, [item.lotto_number_id], (error) => {});
-// };
-
-// const insertPrizeLog = (item, total) => {
-//   const sql = `INSERT INTO prize_log (lotto_type_id, CURDATE(), created_by, total, poy_code) VALUES (?, ?, ?, ?)`;
-//   connection.query(
-//     sql,
-//     [item.lotto_type_id, item.created_by, total, item.poy_code],
-//     (error) => {}
-//   );
-// };
-
-// const updateFail = (item) => {
-//   connection.query(
-//     `UPDATE lotto_number SET status = 'fail' WHERE lotto_type_id = ? AND lotto_number_id = ? AND status = ?`,
-//     [item.lotto_type_id, item.lotto_number_id, "wait"],
-//     (error) => {}
-//   );
-// };
-
-// const updateStatusPoy = (item) => {
-//   connection.query(
-//     `UPDATE poy SET status_result = ? WHERE lotto_type_id = ? AND DATE(created_at) = CURDATE();`,
-//     [1, item.lotto_type_id],
-//     (error, result, fields) => {}
-//   );
-// };
-
-// const updateStatusPrize = (item) => {
-//   connection.query(
-//     `UPDATE prize SET status = 1 WHERE prize_id = ?`,
-//     [1, item.prize_id],
-//     (error, result, fields) => {}
-//   );
-// };
 
 const rules = {
   วิ่งบน: (item, prize) => prize.prize3top.toString().includes(item.number),
@@ -817,97 +800,206 @@ async function getPrize() {
                         );
                       }
                     } else {
-                      const updateSuccess = (item) => {
-                        return new Promise((resolve, reject) => {
-                          const sqlUpdate = `UPDATE lotto_number SET status = 'suc' WHERE lotto_number_id = ? AND status_poy = 'SUC' AND status = 'wait'`;
-                          connection.query(
-                            sqlUpdate,
-                            [item.lotto_number_id],
-                            (error) => {
-                              if (error) return reject(error);
-                              resolve();
-                            }
-                          );
-                        });
-                      };
+                      // const updateSuccess = (item) => {
+                      //   return new Promise((resolve, reject) => {
+                      //     const sqlUpdate = `UPDATE lotto_number SET status = 'suc' WHERE lotto_number_id = ? AND status_poy = 'SUC' AND status = 'wait'`;
+                      //     connection.query(
+                      //       sqlUpdate,
+                      //       [item.lotto_number_id],
+                      //       (error) => {
+                      //         if (error) return reject(error);
+                      //         resolve();
+                      //       }
+                      //     );
+                      //   });
+                      // };
 
-                      const insertPrizeLog = (item, total) => {
-                        return new Promise((resolve, reject) => {
-                          const sql = `INSERT INTO prize_log (lotto_type_id, lotto_date, created_by, total, poy_code) VALUES (?, NOW(), ?, ?, ?)`;
-                          connection.query(
-                            sql,
-                            [
-                              item.lotto_type_id,
-                              item.created_by,
-                              total,
-                              item.poy_code,
-                            ],
-                            (error) => {
-                              if (error) return reject(error);
-                              resolve();
-                            }
-                          );
-                        });
-                      };
+                      // const insertPrizeLog = (item, total) => {
+                      //   return new Promise((resolve, reject) => {
+                      //     const sql = `INSERT INTO prize_log (lotto_type_id, lotto_date, created_by, total, poy_code) VALUES (?, NOW(), ?, ?, ?)`;
+                      //     connection.query(
+                      //       sql,
+                      //       [
+                      //         item.lotto_type_id,
+                      //         item.created_by,
+                      //         total,
+                      //         item.poy_code,
+                      //       ],
+                      //       (error) => {
+                      //         if (error) return reject(error);
+                      //         resolve();
+                      //       }
+                      //     );
+                      //   });
+                      // };
 
-                      const updateFail = (item) => {
-                        return new Promise((resolve, reject) => {
-                          connection.query(
-                            `UPDATE lotto_number SET status = 'fail' WHERE lotto_type_id = ? AND lotto_number_id = ? AND status = ?`,
-                            [item.lotto_type_id, item.lotto_number_id, "wait"],
-                            (error) => {
-                              if (error) return reject(error);
-                              resolve();
-                            }
-                          );
-                        });
-                      };
+                      // const updateFail = (item) => {
+                      //   return new Promise((resolve, reject) => {
+                      //     connection.query(
+                      //       `UPDATE lotto_number SET status = 'fail' WHERE lotto_type_id = ? AND lotto_number_id = ? AND status = ?`,
+                      //       [item.lotto_type_id, item.lotto_number_id, "wait"],
+                      //       (error) => {
+                      //         if (error) return reject(error);
+                      //         resolve();
+                      //       }
+                      //     );
+                      //   });
+                      // };
 
-                      const updateStatusPoy = (item) => {
-                        return new Promise((resolve, reject) => {
-                          connection.query(
-                            `UPDATE poy SET status_result = ? WHERE lotto_type_id = ? AND installment_date = CURDATE();`,
-                            [1, item.lotto_type_id],
-                            (error) => {
-                              if (error) return reject(error);
-                              resolve();
-                            }
-                          );
-                        });
-                      };
+                      // const updateStatusPoy = (item) => {
+                      //   return new Promise((resolve, reject) => {
+                      //     connection.query(
+                      //       `UPDATE poy SET status_result = ? WHERE lotto_type_id = ? AND installment_date = CURDATE();`,
+                      //       [1, item.lotto_type_id],
+                      //       (error) => {
+                      //         if (error) return reject(error);
+                      //         resolve();
+                      //       }
+                      //     );
+                      //   });
+                      // };
 
-                      const updateStatusPrize = (prize) => {
-                        return new Promise((resolve, reject) => {
-                          const sql = `UPDATE prize SET status = 1 WHERE prize_id = ?`;
-                          connection.query(sql, [prize.prize_id], (error) => {
-                            if (error) return reject(error);
-                            resolve();
-                          });
-                        });
-                      };
+                      // const updateStatusPrize = (prize) => {
+                      //   return new Promise((resolve, reject) => {
+                      //     const sql = `UPDATE prize SET status = 1 WHERE prize_id = ?`;
+                      //     connection.query(sql, [prize.prize_id], (error) => {
+                      //       if (error) return reject(error);
+                      //       resolve();
+                      //     });
+                      //   });
+                      // };
 
+                      // const processLotto = async () => {
+                      //   try {
+                      //     const [resultPrize] = await connection
+                      //       .promise()
+                      //       .query(
+                      //         "SELECT * FROM prize WHERE lotto_type_id = ? AND prize_time = ? AND status = 0",
+                      //         [queryLottoClose.lotto_type_id, dateNow2]
+                      //       );
+
+                      //     if (resultPrize.length === 0) return;
+
+                      //     const [resultLotto] = await connection
+                      //       .promise()
+                      //       .query(
+                      //         `SELECT ln.* FROM lotto_number as ln
+                      //       LEFT JOIN lotto_type as lt ON ln.lotto_type_id = lt.lotto_type_id
+                      //       LEFT JOIN member as mb ON ln.created_by = mb.id
+                      //       WHERE ln.lotto_type_id = ? AND ln.status_poy = 'SUC' AND ln.installment_date = DATE(lt.closing_time);`,
+                      //         [queryLottoClose.lotto_type_id]
+                      //       );
+
+                      //     await updateStatusPrize(resultPrize[0]);
+
+                      //     for (const item of resultLotto) {
+                      //       const date = moment(
+                      //         item.installment_date,
+                      //         "YYYY-MM-DD"
+                      //       );
+                      //       const formattedDate =
+                      //         date.format("DD/MM") +
+                      //         "/" +
+                      //         (date.year() + 543).toString().slice(-2);
+                      //       const dateRegex =
+                      //         el.periodName.match(/\d{2}\/\d{2}\/\d{2}/)[0];
+                      //       if (formattedDate !== dateRegex) continue;
+
+                      //       const checkRule = rules[item.type_option];
+                      //       if (!checkRule) continue;
+
+                      //       const isWin = resultPrize.some((prize) =>
+                      //         checkRule(item, prize)
+                      //       );
+
+                      //       if (isWin) {
+                      //         await updateSuccess(item);
+                      //         const total = item.price * item.pay;
+                      //         await insertPrizeLog(item, total);
+                      //         await updateStatusPoy(item);
+
+                      //         const [resultPrizeLog] = await connection
+                      //           .promise()
+                      //           .query(
+                      //             // `SELECT SUM(total * pay) as total, created_by FROM lotto_number WHERE installment_date = CURDATE() AND lotto_type_id = ? AND status = 'suc' GROUP BY created_by`,
+                      //             `SELECT lotto_type_id, lotto_date, created_by, total, poy_code FROM prize_log WHERE lotto_date = CURDATE() AND lotto_type_id = ?`,
+                      //             [queryLottoClose.lotto_type_id]
+                      //           );
+
+                      //         for (const prizeItem of resultPrizeLog) {
+                      //           const [resultCredit] = await connection
+                      //             .promise()
+                      //             .query(
+                      //               `SELECT credit_balance FROM member WHERE id = ?`,
+                      //               [prizeItem.created_by]
+                      //             );
+
+                      //           if (resultCredit.length > 0) {
+                      //             const totalCredit =
+                      //               parseFloat(resultCredit[0].credit_balance) +
+                      //               parseFloat(prizeItem.total);
+                      //             await connection
+                      //               .promise()
+                      //               .query(
+                      //                 `UPDATE member SET credit_balance = ? WHERE id = ?`,
+                      //                 [totalCredit, prizeItem.created_by]
+                      //               );
+
+                      //             await connection
+                      //               .promise()
+                      //               .query(
+                      //                 `INSERT INTO credit_log (credit_previous, credit_after, created_by, lotto_type_id, installment, prize) VALUES (?, ?, ?, ?, ?, ?)`,
+                      //                 [
+                      //                   resultCredit[0].credit_balance,
+                      //                   totalCredit,
+                      //                   prizeItem.created_by,
+                      //                   queryLottoClose.lotto_type_id,
+                      //                   dateNow,
+                      //                   prizeItem.total,
+                      //                 ]
+                      //               );
+
+                      //             console.log(`เพิ่มเครดิตถูกหวยสำเร็จ`);
+                      //           }
+                      //         }
+                      //       } else {
+                      //         await updateFail(item);
+                      //       }
+                      //     }
+
+                      //     // console.log("ประมวลผลเรียบร้อย");
+                      //   } catch (error) {
+                      //     console.error("เกิดข้อผิดพลาด:", error);
+                      //   }
+                      // };
+
+                      // processLotto();
                       const processLotto = async () => {
+                        const conn = connection.promise();
+                        const trx = await conn.getConnection();
+
                         try {
-                          const [resultPrize] = await connection
-                            .promise()
-                            .query(
-                              "SELECT * FROM prize WHERE lotto_type_id = ? AND prize_time = ? AND status = 0",
-                              [queryLottoClose.lotto_type_id, dateNow2]
-                            );
+                          await trx.beginTransaction();
+
+                          const [resultPrize] = await trx.query(
+                            "SELECT * FROM prize WHERE lotto_type_id = ? AND prize_time = ? AND status = 0",
+                            [queryLottoClose.lotto_type_id, dateNow2]
+                          );
 
                           if (resultPrize.length === 0) return;
 
-                          const [resultLotto] = await connection
-                            .promise()
-                            .query(
-                              `SELECT ln.* FROM lotto_number as ln 
-                            LEFT JOIN lotto_type as lt ON ln.lotto_type_id = lt.lotto_type_id 
-                            LEFT JOIN member as mb ON ln.created_by = mb.id 
-                            WHERE ln.lotto_type_id = ? AND ln.status_poy = 'SUC' AND ln.installment_date = DATE(lt.closing_time);`,
-                              [queryLottoClose.lotto_type_id]
-                            );
+                          const [resultLotto] = await trx.query(
+                            `SELECT ln.* FROM lotto_number as ln 
+                             LEFT JOIN lotto_type as lt ON ln.lotto_type_id = lt.lotto_type_id 
+                             LEFT JOIN member as mb ON ln.created_by = mb.id 
+                             WHERE ln.lotto_type_id = ? AND ln.status_poy = 'SUC' AND ln.installment_date = DATE(lt.closing_time);`,
+                            [queryLottoClose.lotto_type_id]
+                          );
 
-                          await updateStatusPrize(resultPrize[0]);
+                          await trx.query(
+                            `UPDATE prize SET status = 1 WHERE prize_id = ?`,
+                            [resultPrize[0].prize_id]
+                          );
 
                           for (const item of resultLotto) {
                             const date = moment(
@@ -928,64 +1020,93 @@ async function getPrize() {
                             const isWin = resultPrize.some((prize) =>
                               checkRule(item, prize)
                             );
-
                             if (isWin) {
-                              await updateSuccess(item);
+                              await trx.query(
+                                `UPDATE lotto_number SET status = 'suc' WHERE lotto_number_id = ? AND status_poy = 'SUC' AND status = 'wait'`,
+                                [item.lotto_number_id]
+                              );
+
                               const total = item.price * item.pay;
-                              await insertPrizeLog(item, total);
-                              await updateStatusPoy(item);
 
-                              const [resultPrizeLog] = await connection
-                                .promise()
-                                .query(
-                                  `SELECT SUM(total * pay) as total, created_by FROM lotto_number WHERE installment_date = CURDATE() AND lotto_type_id = ? AND status = 'suc' GROUP BY created_by`,
-                                  [queryLottoClose.lotto_type_id]
-                                );
+                              await trx.query(
+                                `INSERT INTO prize_log (lotto_type_id, lotto_date, created_by, total, poy_code) VALUES (?, NOW(), ?, ?, ?)`,
+                                [
+                                  item.lotto_type_id,
+                                  item.created_by,
+                                  total,
+                                  item.poy_code,
+                                ]
+                              );
 
-                              for (const prizeItem of resultPrizeLog) {
-                                const [resultCredit] = await connection
-                                  .promise()
-                                  .query(
-                                    `SELECT credit_balance FROM member WHERE id = ?`,
-                                    [prizeItem.created_by]
-                                  );
-
-                                if (resultCredit.length > 0) {
-                                  const totalCredit =
-                                    parseFloat(resultCredit[0].credit_balance) +
-                                    parseFloat(prizeItem.total);
-                                  await connection
-                                    .promise()
-                                    .query(
-                                      `UPDATE member SET credit_balance = ? WHERE id = ?`,
-                                      [totalCredit, prizeItem.created_by]
-                                    );
-
-                                  await connection
-                                    .promise()
-                                    .query(
-                                      `INSERT INTO credit_log (credit_previous, credit_after, created_by, lotto_type_id, installment, prize) VALUES (?, ?, ?, ?, ?, ?)`,
-                                      [
-                                        resultCredit[0].credit_balance,
-                                        totalCredit,
-                                        prizeItem.created_by,
-                                        queryLottoClose.lotto_type_id,
-                                        dateNow,
-                                        prizeItem.total,
-                                      ]
-                                    );
-
-                                  console.log(`เพิ่มเครดิตถูกหวยสำเร็จ`);
-                                }
-                              }
+                              await trx.query(
+                                `UPDATE poy SET status_result = ? WHERE lotto_type_id = ? AND installment_date = CURDATE();`,
+                                [1, item.lotto_type_id]
+                              );
                             } else {
-                              await updateFail(item);
+                              await trx.query(
+                                `UPDATE lotto_number SET status = 'fail' WHERE lotto_type_id = ? AND lotto_number_id = ? AND status = ?`,
+                                [
+                                  item.lotto_type_id,
+                                  item.lotto_number_id,
+                                  "wait",
+                                ]
+                              );
                             }
                           }
 
-                          // console.log("ประมวลผลเรียบร้อย");
+                          // ดึงข้อมูลจาก prize_log เพื่ออัปเดตเครดิต
+                          const [prizeLogRows] = await trx.query(
+                            `SELECT lotto_type_id, lotto_date, created_by, total, poy_code 
+                             FROM prize_log 
+                             WHERE lotto_date = CURDATE() AND lotto_type_id = ?`,
+                            [queryLottoClose.lotto_type_id]
+                          );
+
+                          for (const row of prizeLogRows) {
+                            const [creditRows] = await trx.query(
+                              `SELECT credit_balance FROM member WHERE id = ?`,
+                              [row.created_by]
+                            );
+
+                            if (creditRows.length > 0) {
+                              const creditBefore = parseFloat(
+                                creditRows[0].credit_balance
+                              );
+                              const creditAfter =
+                                creditBefore + parseFloat(row.total);
+
+                              await trx.query(
+                                `UPDATE member SET credit_balance = ? WHERE id = ?`,
+                                [creditAfter, row.created_by]
+                              );
+
+                              await trx.query(
+                                `INSERT INTO credit_log 
+                                 (credit_previous, credit_after, created_by, lotto_type_id, installment, prize) 
+                                 VALUES (?, ?, ?, ?, ?, ?)`,
+                                [
+                                  creditBefore,
+                                  creditAfter,
+                                  row.created_by,
+                                  queryLottoClose.lotto_type_id,
+                                  dateNow,
+                                  row.total,
+                                ]
+                              );
+
+                              console.log(
+                                `เพิ่มเครดิตให้ user ${row.created_by} จำนวน ${row.total}`
+                              );
+                            }
+                          }
+
+                          await trx.commit();
+                          // console.log("ประมวลผลสำเร็จ");
                         } catch (error) {
-                          console.error("เกิดข้อผิดพลาด:", error);
+                          await trx.rollback();
+                          console.error("เกิดข้อผิดพลาด (rollback):", error);
+                        } finally {
+                          trx.release();
                         }
                       };
 
