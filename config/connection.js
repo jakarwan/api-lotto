@@ -11,7 +11,7 @@ const connection = mysql.createPool({
   // host: "127.0.0.1",
   user: "basz",
   password: "26153220.Bb",
-  password: "",
+  // password: "",
   database: "demo_lotto",
   // database: "eagle168",
   // timezone: "Asia/Bangkok",
