@@ -48,85 +48,168 @@ router.get("/", verifyToken, (req, res) => {
   });
 });
 
-router.put("/add-credit", verifyToken, (req, res) => {
-  jwt.verify(req.token, "secretkey", (err, data) => {
-    if (!err) {
-      if (data.user.role === "SADMIN") {
-        //   var d = moment(new Date()).format("YYYY-MM-DD");
-        var phone = req.body.phone;
-        var amount = req.body.amount;
-        var type = req.body.type;
-        var note = req.body.note;
-        if (phone != "" && amount != "" && type != "") {
-          if (!isNaN(amount)) {
-            if (parseFloat(amount) > 0) {
-              var sql = "SELECT * FROM member WHERE phone = ?";
-              connection.query(sql, [phone], (error, resultMember, fields) => {
-                if (resultMember != "") {
-                  let credit =
-                    parseFloat(resultMember[0].credit_balance) +
-                    parseFloat(amount);
+// router.put("/add-credit", verifyToken, (req, res) => {
+//   jwt.verify(req.token, "secretkey", (err, data) => {
+//     if (!err) {
+//       if (data.user.role === "SADMIN") {
+//         //   var d = moment(new Date()).format("YYYY-MM-DD");
+//         var phone = req.body.phone;
+//         var amount = req.body.amount;
+//         var type = req.body.type;
+//         var note = req.body.note;
+//         if (phone != "" && amount != "" && type != "") {
+//           if (!isNaN(amount)) {
+//             if (parseFloat(amount) > 0) {
+//               var sql = "SELECT member.credit_balance, member.phone, member.id FROM member WHERE phone = ?";
+//               connection.query(sql, [phone], (error, resultMember, fields) => {
+//                 if (resultMember != "") {
+//                   let credit =
+//                     parseFloat(resultMember[0].credit_balance) +
+//                     parseFloat(amount);
 
-                  var sql =
-                    "INSERT INTO deposite (phone, amount, type, type_dp, note, add_by, user_id) VALUES(?, ?, ?, ?, ?, ?, ?)";
-                  connection.query(
-                    sql,
-                    [
-                      resultMember[0].phone,
-                      amount,
-                      type,
-                      "MANUAL",
-                      note,
-                      data.user.id,
-                      resultMember[0].id,
-                    ],
-                    (error, result, fields) => {
-                      var sql =
-                        "UPDATE member SET credit_balance = ? WHERE phone = ?";
-                      connection.query(
-                        sql,
-                        [credit, phone],
-                        (error, result, fields) => {
-                          return res.status(200).send({
-                            status: true,
-                            msg: "เพิ่มเครดิตลูกค้าสำเร็จ",
-                          });
-                        }
-                      );
-                    }
-                  );
-                } else {
-                  return res
-                    .status(400)
-                    .send({ status: false, msg: "ไม่พบผู้ใช้นี้ในระบบ" });
-                }
-              });
-            } else {
-              return res
-                .status(400)
-                .send({ status: false, msg: "เครดิตต้องไม่น้อยกว่า 1 เครดิต" });
-            }
-          } else {
-            return res.status(400).send({
-              status: false,
-              msg: "กรุณากรอกเครดิตเป็นตัวเลข",
-            });
-          }
-        } else {
-          return res
-            .status(400)
-            .send({ status: false, msg: "กรุณากรอกข้อมูลให้ครบ" });
-        }
-      } else {
-        return res.status(403).send({
-          status: false,
-          msg: "คุณไม่มีสิทธิ์เข้าถึงข้อมูลนี้",
-        });
-      }
-    } else {
-      return res.status(403).send({ status: false, msg: "กรุณาเข้าสู่ระบบ" });
+//                   var sql =
+//                     "INSERT INTO deposite (phone, amount, type, type_dp, note, add_by, user_id) VALUES(?, ?, ?, ?, ?, ?, ?)";
+//                   connection.query(
+//                     sql,
+//                     [
+//                       resultMember[0].phone,
+//                       amount,
+//                       type,
+//                       "MANUAL",
+//                       note,
+//                       data.user.id,
+//                       resultMember[0].id,
+//                     ],
+//                     (error, result, fields) => {
+//                       var sql =
+//                         "UPDATE member SET credit_balance = ? WHERE phone = ?";
+//                       connection.query(
+//                         sql,
+//                         [credit, phone],
+//                         (error, result, fields) => {
+//                           return res.status(200).send({
+//                             status: true,
+//                             msg: "เพิ่มเครดิตลูกค้าสำเร็จ",
+//                           });
+//                         }
+//                       );
+//                     }
+//                   );
+//                 } else {
+//                   return res
+//                     .status(400)
+//                     .send({ status: false, msg: "ไม่พบผู้ใช้นี้ในระบบ" });
+//                 }
+//               });
+//             } else {
+//               return res
+//                 .status(400)
+//                 .send({ status: false, msg: "เครดิตต้องไม่น้อยกว่า 1 เครดิต" });
+//             }
+//           } else {
+//             return res.status(400).send({
+//               status: false,
+//               msg: "กรุณากรอกเครดิตเป็นตัวเลข",
+//             });
+//           }
+//         } else {
+//           return res
+//             .status(400)
+//             .send({ status: false, msg: "กรุณากรอกข้อมูลให้ครบ" });
+//         }
+//       } else {
+//         return res.status(403).send({
+//           status: false,
+//           msg: "คุณไม่มีสิทธิ์เข้าถึงข้อมูลนี้",
+//         });
+//       }
+//     } else {
+//       return res.status(403).send({ status: false, msg: "กรุณาเข้าสู่ระบบ" });
+//     }
+//   });
+// });
+
+const util = require("util");
+
+router.put("/add-credit", verifyToken, async (req, res) => {
+  try {
+    const decoded = jwt.verify(req.token, "secretkey");
+
+    if (decoded.user.role !== "SADMIN") {
+      return res
+        .status(403)
+        .json({ status: false, msg: "คุณไม่มีสิทธิ์เข้าถึงข้อมูลนี้" });
     }
-  });
+
+    const { phone, amount, type, note } = req.body;
+
+    if (!phone || !amount || !type) {
+      return res
+        .status(400)
+        .json({ status: false, msg: "กรุณากรอกข้อมูลให้ครบ" });
+    }
+
+    if (isNaN(amount) || parseFloat(amount) <= 0) {
+      return res.status(400).json({
+        status: false,
+        msg: "เครดิตต้องเป็นตัวเลขและมากกว่า 0",
+      });
+    }
+
+    // ใช้ promise wrapper
+    const query = util.promisify(connection.query).bind(connection);
+
+    // เริ่ม transaction
+    await query("START TRANSACTION");
+
+    const resultMember = await query(
+      "SELECT credit_balance, phone, id FROM member WHERE phone = ? FOR UPDATE",
+      [phone]
+    );
+
+    if (resultMember.length === 0) {
+      await query("ROLLBACK");
+      return res
+        .status(400)
+        .json({ status: false, msg: "ไม่พบผู้ใช้นี้ในระบบ" });
+    }
+
+    const member = resultMember[0];
+    const newCredit = parseFloat(member.credit_balance) + parseFloat(amount);
+
+    await query(
+      "INSERT INTO deposite (phone, amount, type, type_dp, note, add_by, user_id) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      [member.phone, amount, type, "MANUAL", note, decoded.user.id, member.id]
+    );
+
+    await query("UPDATE member SET credit_balance = ? WHERE phone = ?", [
+      newCredit,
+      phone,
+    ]);
+
+    await query("COMMIT");
+
+    return res.status(200).json({
+      status: true,
+      msg: "เติมเครดิตสำเร็จ",
+    });
+  } catch (err) {
+    console.error(err);
+    // rollback หากเกิด error
+    try {
+      await util.promisify(connection.query).bind(connection)("ROLLBACK");
+    } catch (rollbackError) {
+      console.error("ROLLBACK error:", rollbackError);
+    }
+
+    if (err.name === "JsonWebTokenError") {
+      return res.status(403).json({ status: false, msg: "กรุณาเข้าสู่ระบบ" });
+    }
+
+    return res
+      .status(500)
+      .json({ status: false, msg: "เกิดข้อผิดพลาดภายในระบบ" });
+  }
 });
 
 router.put("/dis-credit", verifyToken, (req, res) => {
@@ -289,12 +372,10 @@ router.put("/update-aff-user", verifyToken, (req, res) => {
                 }
               );
             } else {
-              return res
-                .status(400)
-                .send({
-                  status: false,
-                  msg: "เปอร์เซ็นต์ต้องไม่น้อยกว่า 0 และไม่เกิน 100",
-                });
+              return res.status(400).send({
+                status: false,
+                msg: "เปอร์เซ็นต์ต้องไม่น้อยกว่า 0 และไม่เกิน 100",
+              });
             }
           } else {
             return res
