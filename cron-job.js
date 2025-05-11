@@ -59,7 +59,7 @@ WHERE type_id != 2;
 }
 
 // cron job reset lotto after 05.00
-cron.schedule("0 5 * * * *", async () => {
+cron.schedule("0 5 * * *", async () => {
   updateTime();
 });
 
