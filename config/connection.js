@@ -12,9 +12,12 @@ const connection = mysql.createPool({
   user: "basz",
   password: "26153220.Bb",
   // password: "",
-  database: "demo_lotto",
-  // database: "eagle168",
+  database: "meow_lotto",
   // timezone: "Asia/Bangkok",
   charset: "utf8",
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
+  
 });
 module.exports = connection;

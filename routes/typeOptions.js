@@ -22,7 +22,6 @@ router.get("/", verifyToken, (req, res) => {
       if (huayId) {
         var sql = "SELECT * FROM lotto_type WHERE lotto_type_id = ?";
         connection.query(sql, [huayId], (error, resultLotto, fields) => {
-          console.log(resultLotto,'resultLotto')
           if (resultLotto != "") {
             // var sql =
             //   "SELECT t.type_option_id, t.name, t.price, t.promotion_id, t.group_option, `t.rank`, t.pay_by_type, t.type_id, pmt.discount FROM type_options as t JOIN promotions as pmt ON t.promotion_id = pmt.promotion_id WHERE t.promotion_id = ? ORDER BY `rank` ASC";

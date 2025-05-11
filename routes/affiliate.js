@@ -140,7 +140,8 @@ router.get("/log-daily", verifyToken, (req, res) => {
   DATE(created_at) AS created_date
 FROM aff_log_daily 
 WHERE m_id_header = ? 
-GROUP BY DATE(created_at);`;
+GROUP BY DATE(created_at);
+`;
             connection.query(
               sql,
               [result[0].id],

@@ -249,78 +249,134 @@ router.post("/edit-close-date", verifyToken, (req, res) => {
   });
 });
 
+// router.post(
+//   "/add-lotto-type",
+//   verifyToken,
+//   upload.single("file"),
+//   async (req, res) => {
+//     jwt.verify(req.token, "secretkey", (err, data) => {
+//       if (!err) {
+//         // const filePath =
+//         //   req.protocol +
+//         //   "://" +
+//         //   host +
+//         //   "/" +
+//         //   "uploads/" +
+//         //   req.file.filename;
+//         // const host = req.hostname;
+//         const name = req.body.name;
+//         // const hostname = "api.laosviangjanvip.com";
+//         const reqhttps = "https";
+//         //   const lotto_type_img = req.file;
+//         const type_id = req.body.type_id;
+//         const closing_time = req.body.closing_time;
+//         if (req.body.name != null && req.file != null) {
+//           const { filename: image } = req.file;
+//           const filePath =
+//             reqhttps + "://" + req.get("host") + "/" + "api/images/" + image;
+//           // const filePath = "http://localhost:3000/uploads/" + image;
+//           var sql =
+//             "INSERT INTO lotto_type (lotto_type_name, lotto_type_img, type_id, closing_time) VALUES(?, ?, ?, ?)";
+//           connection.query(
+//             sql,
+//             [name, filePath, type_id, closing_time],
+//             (error, result, fields) => {
+//               return res.status(200).send({
+//                 status: true,
+//                 msg: "เพิ่มข้อมูลหวยสำเร็จ",
+//               });
+//             }
+//           );
+//         } else {
+//           return res.status(400).send({
+//             success: false,
+//             msg: "กรุณากรอกข้อมูลให้ครบ",
+//           });
+//         }
+//       } else {
+//         res.status(403).send({ status: "error", msg: "กรุณาเข้าสู่ระบบ" });
+//       }
+//     });
+//   }
+// );
+
 router.post(
   "/add-lotto-type",
   verifyToken,
   upload.single("file"),
   async (req, res) => {
-    jwt.verify(req.token, "secretkey", (err, data) => {
-      if (!err) {
-        // const filePath =
-        //   req.protocol +
-        //   "://" +
-        //   host +
-        //   "/" +
-        //   "uploads/" +
-        //   req.file.filename;
-        // const host = req.hostname;
-        const name = req.body.name;
-        // const hostname = "api.laosviangjanvip.com";
-        const reqhttps = "https";
-        //   const lotto_type_img = req.file;
-        const type_id = req.body.type_id;
-        const closing_time = req.body.closing_time;
-        if (req.body.name != null && req.file != null) {
-          const { filename: image } = req.file;
-          const filePath =
-            reqhttps + "://" + req.get("host") + "/" + "api/images/" + image;
-          // const filePath = "http://localhost:3000/uploads/" + image;
-          var sql =
-            "INSERT INTO lotto_type (lotto_type_name, lotto_type_img, type_id, closing_time) VALUES(?, ?, ?, ?)";
-          connection.query(
-            sql,
-            [name, filePath, type_id, closing_time],
-            (error, result, fields) => {
-              return res.status(200).send({
-                status: true,
-                msg: "เพิ่มข้อมูลหวยสำเร็จ",
-              });
-            }
-          );
-        } else {
-          return res.status(400).send({
-            success: false,
-            msg: "กรุณากรอกข้อมูลให้ครบ",
-          });
+    try {
+      const { name, type_id, closing_time } = req.body;
+
+      if (!name || !req.file || !type_id || !closing_time) {
+        return res.status(400).json({
+          status: false,
+          msg: "กรุณากรอกข้อมูลให้ครบ",
+        });
+      }
+      if (type_id != 9) {
+        const { filename } = req.file;
+        const filePath = `${req.protocol}://${req.get(
+          "host"
+        )}/api/images/${filename}`;
+
+        const sql = `
+        INSERT INTO lotto_type (lotto_type_name, lotto_type_img, type_id, closing_time)
+        VALUES (?, ?, ?, ?)
+      `;
+        await connection
+          .promise()
+          .query(sql, [name, filePath, type_id, closing_time]);
+
+        return res.status(200).json({
+          status: true,
+          msg: "เพิ่มข้อมูลหวยสำเร็จ",
+        });
+      } else {
+        let baseTime = new Date(closing_time);
+
+        function formatDateLocal(date) {
+          const yyyy = date.getFullYear();
+          const mm = (date.getMonth() + 1).toString().padStart(2, "0");
+          const dd = date.getDate().toString().padStart(2, "0");
+          return `${yyyy}-${mm}-${dd}`;
         }
 
-        // const name = req.body.name;
-        // const lotto_type_img = req.body.lotto_type_img;
-        // const type_id = req.body.type_id;
-        // const closing_time = req.body.closing_time;
-        // if ((name, lotto_type_img, type_id, closing_time)) {
-        //   var sql =
-        //     "INSERT INTO lotto_type (lotto_type_name, lotto_type_img, type_id, closing_time) VALUES(?, ?, ?, ?)";
-        //   connection.query(
-        //     sql,
-        //     [name, lotto_type_img, type_id, closing_time],
-        //     (error, result, fields) => {
-        //
-        //       return res
-        //         .status(200)
-        //         .send({ status: "success", msg: "เพิ่มหวยสำเร็จ" });
-        //     }
-        //   );
-        // } else {
-        //   return res.status(400).send({
-        //     status: "error",
-        //     msg: "กรุณาส่ง ชื่อหวย, รูปภาพ, ประเภท, เวลาปิด",
-        //   });
-        // }
-      } else {
-        res.status(403).send({ status: "error", msg: "กรุณาเข้าสู่ระบบ" });
+        for (let i = 1; i <= 88; i++) {
+          const roundTime = new Date(baseTime.getTime() + (i - 1) * 15 * 60000);
+
+          // ถ้ารอบข้ามวัน (เช่นหลังเที่ยงคืน) ยังให้นับเป็นงวดของวันที่ก่อน
+          const installmentDate = formatDateLocal(baseTime);
+
+          await connection
+            .promise()
+            .query(
+              "INSERT INTO lotto_type (lotto_type_name, type_id, closing_time, open, active, url, round, installment_date) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+              [
+                `${name} รอบที่ ${i}`,
+                type_id,
+                roundTime,
+                1,
+                1,
+                "YEEKEE",
+                i,
+                installmentDate,
+              ]
+            );
+        }
+        return res.status(200).json({
+          status: true,
+          msg: "เพิ่มข้อมูลหวยสำเร็จ",
+        });
       }
-    });
+    } catch (err) {
+      console.error("INSERT ERROR:", err);
+      return res.status(500).json({
+        status: false,
+        msg: "เกิดข้อผิดพลาดภายในเซิร์ฟเวอร์",
+        error: err.message,
+      });
+    }
   }
 );
 

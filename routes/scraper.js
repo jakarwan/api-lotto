@@ -44,7 +44,7 @@ router.get("/", async (req, res) => {
         }
       );
     });
-    console.log(results,'results')
+
     await browser.close();
     return res.status(200).send({ status: true, data: results });
   } catch (err) {
