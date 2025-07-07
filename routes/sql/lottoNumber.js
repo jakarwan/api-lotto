@@ -13,16 +13,16 @@ async function lottoNumberInsert(params) {
   }
 }
 
-async function closeLottoNumberUpdate(updateField, params) {
-  try {
-    var sql = `UPDATE close_number SET ${updateField} = ? WHERE cn_id = ?`;
-    const rows = await query(sql, params);
-    return rows;
-  } catch (error) {
-    console.log(error);
-    return false;
-  }
-}
+// async function closeLottoNumberUpdate(updateField, params) {
+//   try {
+//     var sql = `UPDATE close_number SET ${updateField} = ? WHERE cn_id = ?`;
+//     const rows = await query(sql, params);
+//     return rows;
+//   } catch (error) {
+//     console.log(error);
+//     return false;
+//   }
+// }
 // const lottoNumberInsert = () => {
 //   var sql =
 //     "INSERT INTO lotto_number (number, type_option, price, pay, discount, total, lotto_type_id, created_by, poy_code, status, date_lotto, installment_date) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, curdate(), ?)";
@@ -53,7 +53,7 @@ async function updatePlayLimitMembers(params) {
 
 module.exports = {
   lottoNumberInsert,
-  closeLottoNumberUpdate,
+  // closeLottoNumberUpdate,
   maxPlayUpdate,
   updatePlayLimitMembers,
 };

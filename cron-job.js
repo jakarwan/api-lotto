@@ -7,15 +7,69 @@ const moment = require("moment");
 const axios = require("axios");
 const { updatePlayLimitMembers } = require("./routes/sql/lottoNumber");
 
-async function updateTime() {
+async function closeTimeLottoThai() {
   try {
     const now = moment(new Date());
-    const currentHour = now.hour();
-    const installmentDate =
-      currentHour < 6
-        ? now.clone().subtract(1, "day").format("YYYY-MM-DD")
-        : now.format("YYYY-MM-DD");
+    const day = now.date();
+    // if (day === 2 || day === 17) {
+      // 1️⃣ ดึงข้อมูลหวยไทยทั้งหมด
+      const [lottoTypes] = await connection.promise().query(
+        `
+      SELECT lotto_type_id, lotto_type_name, closing_time 
+      FROM lotto_type
+      WHERE type_id = 2
+      `
+      );
 
+      // 2️⃣ loop เพื่ออัปเดตแต่ละ closing_time ของหวยไทย
+      for (const item of lottoTypes) {
+        // เอาแค่เวลา (HH:mm:ss) จาก closing_time
+        const timePart = moment(item.closing_time).format("HH:mm:ss");
+        if (!timePart || timePart === "Invalid date") continue;
+
+        let newDate = now.format("YYYY-MM-") + day; // เริ่มด้วยวันปัจจุบัน
+
+        // เงื่อนไขพิเศษ: ถ้า day = 2 ให้ไปวันที่ 16
+        if (day === 2) {
+          newDate = now.format("YYYY-MM-") + "16";
+        }
+        else if (day <= 16) {
+          newDate = now.format("YYYY-MM-") + "16";
+        }
+        else if (day >= 17) {
+          newDate = now.clone().add(1, "month").format("YYYY-MM-") + "01";
+        }
+        // ถ้า day = 17 ให้ไปวันที่ 1 ของเดือนถัดไป
+        // else if (day === 17) {
+        //   newDate = now.clone().add(1, "month").format("YYYY-MM-") + "01";
+        // }
+        
+        // 3️⃣ update closing_time ของแต่ละหวย
+        await connection.promise().query(
+          `
+        UPDATE lotto_type
+        SET closing_time = CONCAT(?, ' ', ?),
+            installment_date = ?,
+            open = 1
+        WHERE lotto_type_id = ?
+      `,
+          [newDate, timePart, newDate, item.lotto_type_id]
+        );
+
+        console.log(
+          `✅ อัปเดต closing_time ของหวยไทย ${item.lotto_type_name} (ID: ${item.lotto_type_id}) => ${newDate} ${timePart}`
+        );
+      }
+
+      console.log("🎉 ปรับเวลาหวยไทยทั้งหมดเรียบร้อย!");
+    // }
+  } catch (err) {
+    console.error("เกิดข้อผิดพลาดใน closeTime():", err);
+  }
+}
+
+async function updateTime() {
+  try {
     // อัปเดต closing_time
     await connection.promise().query(
       `
@@ -36,10 +90,9 @@ WHERE type_id != 2;
     await connection.promise().query(
       `
     UPDATE lotto_type
-    SET installment_date = ?
+    SET installment_date = CURDATE()
     WHERE type_id != 2
-  `,
-      [installmentDate]
+  `
     );
 
     // เปิดหวย
@@ -58,9 +111,33 @@ WHERE type_id != 2;
   }
 }
 
+updateTime();
+// closeTimeLottoThai();
+
+async function resetCloseNumber() {
+  try {
+    // เปิดหวย
+    await connection.promise().query(`
+    UPDATE close_number cn
+JOIN lotto_type lt ON lt.lotto_type_id = cn.lotto_type_id
+SET
+  cn.remaining_limit = cn.buy_limit,
+  cn.series = 1
+WHERE lt.type_id != 2;
+
+  `);
+
+    console.log(`Update Reset Close Number 05.00`);
+  } catch (err) {
+    console.error("CRON ERROR:", err);
+  }
+}
+
 // cron job reset lotto after 05.00
 cron.schedule("0 5 * * *", async () => {
-  updateTime();
+  await updateTime();
+  await resetCloseNumber();
+  // await closeTimeLottoThai();
 });
 
 // cron job add affiliate today
@@ -273,7 +350,7 @@ const rules = {
 };
 
 // cronjob auto prize
-cron.schedule("*/1 * * * *", async () => {
+cron.schedule("*/5 * * * *", async () => {
   console.log("[CRON] Running getPrize()");
   await getPrize();
   await getPrizeYeekee();
@@ -332,10 +409,21 @@ WHERE open = 0
 
 /////////////////// ออกผลหวยออโต้ /////////////////////////////
 async function getPrize() {
-  const today = moment().format("YYYY-MM-DD");
-  const todayDisplay = moment().format("YYYYMMDD");
+  // const today = moment().format("YYYY-MM-DD");
+  // const todayDisplay = moment().format("YYYYMMDD");
   const nowText = moment().format("YYYY-MM-DD HH:mm:ss");
 
+  const now = moment();
+  const installmentDate =
+    now.format("HH:mm:ss") < "06:00:00"
+      ? now.clone().subtract(1, "day").format("YYYY-MM-DD")
+      : now.format("YYYY-MM-DD");
+
+  const todayDisplay =
+    now.format("HH:mm:ss") < "06:00:00"
+      ? now.clone().subtract(1, "day").format("YYYYMMDD")
+      : now.format("YYYYMMDD");
+  // console.log(todayDisplay, "todayDisplay");
   try {
     const response = await axios.get(
       `https://api.huaykk.live/info/getResult/${todayDisplay}`,
@@ -353,10 +441,9 @@ async function getPrize() {
       .query(
         "SELECT * FROM lotto_type WHERE open = 0 AND active = 1 AND DATE(closing_time) = CURDATE()"
       );
-
     for (const el of response.data.info) {
       const match = lottoTypes.find((item) => {
-        const closingDate = moment(item.closing_time);
+        const closingDate = moment(item.installment_date);
         const formatted =
           closingDate.format("DD/MM") +
           "/" +
@@ -370,7 +457,7 @@ async function getPrize() {
         .promise()
         .query(
           "SELECT * FROM prize WHERE lotto_type_id = ? AND prize_time = ?",
-          [match.lotto_type_id, today]
+          [match.lotto_type_id, installmentDate]
         );
 
       if (
@@ -394,21 +481,103 @@ async function getPrize() {
             el.award1.length === 6 ? el.award1 : null,
             award3bottom.length ? JSON.stringify(award3bottom) : null,
             "3 ตัวบน",
-            el.award1,
+            el.award1.length === 6 ? el.award1.slice(-3) : el.award1,
             "2 ตัวล่าง",
             el.award2,
-            match.closing_time,
+            match.installment_date,
           ]
         );
         console.log(`[✔] เพิ่มผลหวย ${match.lotto_type_name} ${nowText}`);
       }
 
-      await processLotto(match.lotto_type_id, today, el);
+      await processLotto(match.lotto_type_id, installmentDate, el);
     }
   } catch (err) {
     console.error("getPrize error:", err);
   }
 }
+
+// async function getPrize() {
+//   const now = moment();
+//   const prizeDate =
+//     now.hour() < 6
+//       ? now.clone().subtract(1, "day").format("YYYY-MM-DD")
+//       : now.format("YYYY-MM-DD");
+
+//   try {
+//     const response = await axios.get(
+//       `https://api.huaykk.live/info/getResult/${now.format("YYYYMMDD")}`,
+//       {
+//         headers: {
+//           "Content-Type": "application/x-www-form-urlencoded",
+//           "Accept-Encoding": "*",
+//         },
+//       }
+//     );
+//     if (!response.data.success) return;
+
+//     const [lottoTypes] = await connection.promise().query(
+//       `
+//       SELECT * FROM lotto_type
+//       WHERE open = 0 AND active = 1 AND DATE(installment_date) = ?
+//     `,
+//       [prizeDate]
+//     );
+
+//     for (const el of response.data.info) {
+//       const match = lottoTypes.find((item) => {
+//         const expected =
+//           moment(item.installment_date).format("DD/MM") +
+//           "/" +
+//           (moment(item.installment_date).year() + 543).toString().slice(-2);
+//         const actual = el.periodName.match(/\d{2}\/\d{2}\/\d{2}/)?.[0];
+//         return item.url === el.productCode && expected === actual;
+//       });
+
+//       if (!match || el.award1 === "xxx" || el.award2 === "xx") continue;
+
+//       const [existingPrize] = await connection
+//         .promise()
+//         .query(
+//           "SELECT * FROM prize WHERE lotto_type_id = ? AND prize_time = ?",
+//           [match.lotto_type_id, prizeDate]
+//         );
+
+//       if (existingPrize.length === 0) {
+//         const prize3bottom =
+//           el.award3 && el.award4
+//             ? JSON.stringify([
+//                 { type3front: "3 ตัวหน้า", prize3front: [el.award3] },
+//                 { type3after: "3 ตัวหลัง", prize3after: [el.award4] },
+//               ])
+//             : null;
+
+//         await connection.promise().query(
+//           `
+//           INSERT INTO prize (lotto_type_id, prize6digit, prize3bottom, type3top, prize3top, type2bottom, prize2bottom, prize_time)
+//           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+//         `,
+//           [
+//             match.lotto_type_id,
+//             el.award1.length === 6 ? el.award1 : null,
+//             prize3bottom,
+//             "3 ตัวบน",
+//             el.award1.length === 6 ? el.award1.slice(-3) : el.award1,
+//             "2 ตัวล่าง",
+//             el.award2,
+//             prizeDate,
+//           ]
+//         );
+
+//         console.log(`[✔] เพิ่มผลหวย ${match.lotto_type_name} ${prizeDate}`);
+//       }
+
+//       await processLotto(match.lotto_type_id, prizeDate, el);
+//     }
+//   } catch (err) {
+//     console.error("getPrize error:", err);
+//   }
+// }
 
 // process ออกผลหวยและอัพเดทเครดิต
 async function processLotto(lotto_type_id, prizeDate, el) {
@@ -429,7 +598,7 @@ async function processLotto(lotto_type_id, prizeDate, el) {
     const [numbers] = await conn.query(
       `SELECT ln.* FROM lotto_number ln
        JOIN lotto_type lt ON ln.lotto_type_id = lt.lotto_type_id
-       WHERE ln.lotto_type_id = ? AND ln.status_poy = 'SUC' AND ln.installment_date = DATE(lt.closing_time)`,
+       WHERE ln.lotto_type_id = ? AND ln.status_poy = 'SUC' AND ln.installment_date = lt.installment_date`,
       [lotto_type_id]
     );
 
@@ -482,8 +651,6 @@ async function processLotto(lotto_type_id, prizeDate, el) {
       );
       const creditBefore = parseFloat(member.credit_balance);
       const creditAfter = creditBefore + parseFloat(user.total);
-      console.log(creditBefore, "creditBefore");
-      console.log(creditAfter, "creditAfter");
 
       await conn.query(`UPDATE member SET credit_balance = ? WHERE id = ?`, [
         creditAfter,
@@ -514,6 +681,110 @@ async function processLotto(lotto_type_id, prizeDate, el) {
     conn.release();
   }
 }
+
+// async function processLotto(lotto_type_id, prizeDate, el) {
+//   const conn = await connection.promise().getConnection();
+//   try {
+//     await conn.beginTransaction();
+
+//     const [[prize]] = await conn.query(
+//       "SELECT * FROM prize WHERE lotto_type_id = ? AND prize_time = ? AND status = 0",
+//       [lotto_type_id, prizeDate]
+//     );
+
+//     if (!prize) {
+//       await conn.rollback();
+//       return;
+//     }
+
+//     const [numbers] = await conn.query(
+//       `SELECT * FROM lotto_number WHERE lotto_type_id = ? AND status_poy = 'SUC' AND installment_date = ?`,
+//       [lotto_type_id, prizeDate]
+//     );
+
+//     for (const item of numbers) {
+//       const expected = el.periodName.match(/\d{2}\/\d{2}\/\d{2}/)?.[0];
+//       const formatted =
+//         moment(item.installment_date).format("DD/MM") +
+//         "/" +
+//         (moment(item.installment_date).year() + 543).toString().slice(-2);
+//       if (formatted !== expected) continue;
+
+//       const rule = rules[item.type_option];
+//       if (!rule) continue;
+
+//       const isWin = rule(item, prize);
+//       if (isWin) {
+//         const total = item.price * item.pay;
+//         await conn.query(
+//           `UPDATE lotto_number SET status = 'suc' WHERE lotto_number_id = ? AND status = 'wait'`,
+//           [item.lotto_number_id]
+//         );
+//         await conn.query(
+//           `INSERT INTO prize_log (lotto_type_id, lotto_date, created_by, total, poy_code) VALUES (?, ?, ?, ?, ?)`,
+//           [lotto_type_id, prizeDate, item.created_by, total, item.poy_code]
+//         );
+//       } else {
+//         await conn.query(
+//           `UPDATE lotto_number SET status = 'fail' WHERE lotto_number_id = ? AND status = 'wait'`,
+//           [item.lotto_number_id]
+//         );
+//       }
+//     }
+
+//     await conn.query("UPDATE prize SET status = 1 WHERE prize_id = ?", [
+//       prize.prize_id,
+//     ]);
+//     await conn.query(
+//       "UPDATE poy SET status_result = 1 WHERE lotto_type_id = ? AND installment_date = ?",
+//       [lotto_type_id, prizeDate]
+//     );
+
+//     const [winners] = await conn.query(
+//       `SELECT created_by, SUM(total) as total, MAX(poy_code) as poy_code
+//        FROM prize_log
+//        WHERE lotto_type_id = ? AND lotto_date = ?
+//        GROUP BY created_by`,
+//       [lotto_type_id, prizeDate]
+//     );
+
+//     for (const win of winners) {
+//       const [[member]] = await conn.query(
+//         "SELECT credit_balance FROM member WHERE id = ?",
+//         [win.created_by]
+//       );
+//       const creditBefore = parseFloat(member.credit_balance);
+//       const creditAfter = creditBefore + parseFloat(win.total);
+
+//       await conn.query("UPDATE member SET credit_balance = ? WHERE id = ?", [
+//         creditAfter,
+//         win.created_by,
+//       ]);
+//       await conn.query(
+//         `INSERT INTO credit_log (credit_previous, credit_after, created_by, lotto_type_id, note, installment, prize, poy_code)
+//          VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+//         [
+//           creditBefore,
+//           creditAfter,
+//           win.created_by,
+//           lotto_type_id,
+//           `ถูกรางวัล ${win.total}`,
+//           prizeDate,
+//           win.total,
+//           win.poy_code,
+//         ]
+//       );
+//     }
+
+//     await conn.commit();
+//     console.log(`[✔] ประมวลผลรางวัล ${lotto_type_id}`);
+//   } catch (err) {
+//     await conn.rollback();
+//     console.error("processLotto error:", err);
+//   } finally {
+//     conn.release();
+//   }
+// }
 /////////////////// ออกผลหวยออโต้ /////////////////////////////
 
 // ออกผลหวยยี่กีแบบสุ่ม

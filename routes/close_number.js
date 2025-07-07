@@ -39,7 +39,7 @@ router.get("/all", verifyToken, (req, res) => {
       if (lotto_type_id != null) {
         if (number != null) {
           var sql =
-            "SELECT cn_id, number, type, date_lotto, pay, pay2, pay3, pay4, pay5, buy_limit, buy_limit2, buy_limit3, buy_limit4, buy_limit5, (SELECT lotto_type_name FROM lotto_type WHERE lotto_type_id = cn.lotto_type_id) as lotto_type_name FROM close_number as cn WHERE lotto_type_id = ? AND number = ?";
+            "SELECT cn_id, number, type, remaining_limit, series, date_lotto, pay, pay2, pay3, pay4, pay5, buy_limit, buy_limit2, buy_limit3, buy_limit4, buy_limit5, (SELECT lotto_type_name FROM lotto_type WHERE lotto_type_id = cn.lotto_type_id) as lotto_type_name FROM close_number as cn WHERE lotto_type_id = ? AND number = ?";
           connection.query(
             sql,
             [lotto_type_id, number],
@@ -53,7 +53,7 @@ router.get("/all", verifyToken, (req, res) => {
           );
         } else {
           var sql =
-            "SELECT cn_id, number, type, date_lotto, pay, pay2, pay3, pay4, pay5, buy_limit, buy_limit2, buy_limit3, buy_limit4, buy_limit5, (SELECT lotto_type_name FROM lotto_type WHERE lotto_type_id = cn.lotto_type_id) as lotto_type_name FROM close_number as cn WHERE lotto_type_id = ?";
+            "SELECT cn_id, number, type, remaining_limit, series, date_lotto, pay, pay2, pay3, pay4, pay5, buy_limit, buy_limit2, buy_limit3, buy_limit4, buy_limit5, (SELECT lotto_type_name FROM lotto_type WHERE lotto_type_id = cn.lotto_type_id) as lotto_type_name FROM close_number as cn WHERE lotto_type_id = ?";
           connection.query(sql, [lotto_type_id], (error, resultAll, fields) => {
             // if (result != "") {
             return res.status(200).send({ status: true, data: resultAll });
@@ -88,7 +88,7 @@ router.get("/", verifyToken, (req, res) => {
       var lotto_type_id = req.query.lotto_type_id;
       if (lotto_type_id != null) {
         var sql =
-          "SELECT cn_id, number, type,(CASE WHEN buy_limit > 0 THEN buy_limit WHEN buy_limit2 > 0 THEN buy_limit2 WHEN buy_limit3 > 0 THEN buy_limit3 WHEN buy_limit4 > 0 THEN buy_limit4 ELSE buy_limit5 END) as buy_limit, (CASE WHEN buy_limit > 0 THEN pay WHEN buy_limit2 > 0 THEN pay2 WHEN buy_limit3 > 0 THEN pay3 WHEN buy_limit4 > 0 THEN pay4 ELSE pay5 END) as pay, (CASE WHEN buy_limit > 0 THEN 1 WHEN buy_limit2 > 0 THEN 2 WHEN buy_limit > 0 THEN 3 WHEN buy_limit > 0 THEN 4 ELSE 5 END) as series FROM close_number WHERE lotto_type_id = ?;";
+          "SELECT cn_id, number, type,(CASE WHEN buy_limit > 0 THEN buy_limit WHEN buy_limit2 > 0 THEN buy_limit2 WHEN buy_limit3 > 0 THEN buy_limit3 WHEN buy_limit4 > 0 THEN buy_limit4 ELSE buy_limit5 END) as buy_limit, (CASE WHEN series = 1 THEN pay WHEN series = 2 THEN pay2 WHEN series = 3 THEN pay3 WHEN series = 4 THEN pay4 ELSE pay5 END) as pay, (CASE WHEN buy_limit > 0 THEN 1 WHEN buy_limit2 > 0 THEN 2 WHEN buy_limit > 0 THEN 3 WHEN buy_limit > 0 THEN 4 ELSE 5 END) as series FROM close_number WHERE lotto_type_id = ?;";
         connection.query(sql, [lotto_type_id], (error, result, fields) => {
           return res.status(200).send({ status: true, data: result });
         });
@@ -346,7 +346,8 @@ router.get("/", verifyToken, (req, res) => {
 
 router.post("/add-close-number", verifyToken, (req, res) => {
   jwt.verify(req.token, "secretkey", async (err, data) => {
-    if (err) return res.status(403).send({ status: false, msg: "กรุณาเข้าสู่ระบบ" });
+    if (err)
+      return res.status(403).send({ status: false, msg: "กรุณาเข้าสู่ระบบ" });
 
     const {
       lotto_type_id,
@@ -374,7 +375,9 @@ router.post("/add-close-number", verifyToken, (req, res) => {
     const sql = "SELECT * FROM lotto_type WHERE lotto_type_id = ?";
     connection.query(sql, [lotto_type_id], async (error, result) => {
       if (error || result.length === 0) {
-        return res.status(400).send({ status: false, msg: "ไม่พบประเภทหวยนี้" });
+        return res
+          .status(400)
+          .send({ status: false, msg: "ไม่พบประเภทหวยนี้" });
       }
 
       const d = moment(new Date(result[0].closing_time)).format("YYYY-MM-DD");
@@ -393,6 +396,7 @@ router.post("/add-close-number", verifyToken, (req, res) => {
         buy_limit4,
         buy_limit5,
         d,
+        buy_limit,
       ];
 
       if (allNumber === "1") {
@@ -401,7 +405,12 @@ router.post("/add-close-number", verifyToken, (req, res) => {
         else if (!type.startsWith("2")) max = 10000;
 
         for (let i = 0; i < max; i++) {
-          const num = i.toString().padStart(type.startsWith("2") ? 2 : type.startsWith("3") ? 3 : 4, "0");
+          const num = i
+            .toString()
+            .padStart(
+              type.startsWith("2") ? 2 : type.startsWith("3") ? 3 : 4,
+              "0"
+            );
           values.push([lotto_type_id, num, ...baseValues.slice(1)]);
         }
       } else {
@@ -411,27 +420,32 @@ router.post("/add-close-number", verifyToken, (req, res) => {
       }
 
       if (values.length === 0) {
-        return res.status(400).send({ status: false, msg: "ไม่มีเลขที่จะเพิ่ม" });
+        return res
+          .status(400)
+          .send({ status: false, msg: "ไม่มีเลขที่จะเพิ่ม" });
       }
 
       const insertSql = `
         INSERT INTO close_number 
-        (lotto_type_id, number, type, pay, pay2, pay3, pay4, pay5, buy_limit, buy_limit2, buy_limit3, buy_limit4, buy_limit5, date_lotto) 
+        (lotto_type_id, number, type, pay, pay2, pay3, pay4, pay5, buy_limit, buy_limit2, buy_limit3, buy_limit4, buy_limit5, date_lotto, remaining_limit) 
         VALUES ?
       `;
 
       connection.query(insertSql, [values], (err) => {
         if (err) {
           console.error("Insert Error:", err);
-          return res.status(500).send({ status: false, msg: "เกิดข้อผิดพลาดขณะเพิ่มเลขปิดรับ" });
+          return res
+            .status(500)
+            .send({ status: false, msg: "เกิดข้อผิดพลาดขณะเพิ่มเลขปิดรับ" });
         }
 
-        return res.status(200).send({ status: true, msg: "เพิ่มเลขปิดรับสำเร็จ" });
+        return res
+          .status(200)
+          .send({ status: true, msg: "เพิ่มเลขปิดรับสำเร็จ" });
       });
     });
   });
 });
-
 
 router.delete("/delete-close-number", verifyToken, (req, res) => {
   jwt.verify(req.token, "secretkey", (err, data) => {

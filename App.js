@@ -38,6 +38,7 @@ const reportWithdraw = require("./routes/admin/transaction/report-withdraw");
 const poy = require("./routes/admin/poy/poy");
 const numberBuy = require("./routes/admin/numberBuy/numberBuy");
 const prizeLog = require("./routes/admin/transaction/prizeLog.js");
+const promotion = require("./routes/admin/promotion/promotion.js");
 // const banned = require("./routes/admin/member/bannedUser");
 ///////////////// ADMIN ///////////////////////
 const config = require("./config/config");
@@ -76,6 +77,7 @@ app.use("/api/affiliate-user", affiliateUser);
 app.use("/api/lotto-history", getLottoHistory);
 app.use("/uploads", express.static("uploads"));
 app.use("/api/refund-loss", refundLoss);
+app.use("/api/promotion", promotion);
 ///////////////// ADMIN ///////////////////////
 app.use("/api/admin", dashboard);
 app.use("/api/admin/member", member);

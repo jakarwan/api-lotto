@@ -55,8 +55,15 @@ router.get("/", verifyToken, (req, res) => {
 router.get("/prize-result", verifyToken, (req, res) => {
   jwt.verify(req.token, "secretkey", (err, data) => {
     if (!err) {
-      const { lotto_type_id, startDate, endDate, status, page, perPage } =
-        req.query;
+      const {
+        search,
+        lotto_type_id,
+        startDate,
+        endDate,
+        status, // ใช้สำหรับ HAVING sum_prize > 0
+        page,
+        perPage,
+      } = req.query;
 
       if (!startDate || !endDate) {
         return res
@@ -85,8 +92,8 @@ router.get("/prize-result", verifyToken, (req, res) => {
         LEFT JOIN lotto_number AS ln 
             ON p.poy_code = ln.poy_code 
             AND ln.status = 'suc' 
-            AND ln.installment_date >= ? 
-            AND ln.installment_date < DATE_ADD(?, INTERVAL 1 DAY)
+            AND ln.date_lotto >= ? 
+            AND ln.date_lotto < DATE_ADD(?, INTERVAL 1 DAY)
         WHERE p.date_lotto >= ? 
           AND p.date_lotto < DATE_ADD(?, INTERVAL 1 DAY)
       `;
@@ -98,46 +105,47 @@ router.get("/prize-result", verifyToken, (req, res) => {
         params.push(lotto_type_id);
       }
 
-      if (status) {
-        sql += `
-            GROUP BY 
-                p.poy_code, 
-                p.created_at, 
-                p.status, 
-                p.lotto_type_id, 
-                p.status_result, 
-                p.total, 
-                p.discount, 
-                p.price, 
-                p.note, 
-                lt.lotto_type_name, 
-                mb.name, 
-                mb.familyName
-            HAVING sum_prize > 0 
-        `;
-    } else {
-        sql += `
-            GROUP BY 
-                p.poy_code, 
-                p.created_at, 
-                p.status, 
-                p.lotto_type_id, 
-                p.status_result, 
-                p.total, 
-                p.discount, 
-                p.price, 
-                p.note, 
-                lt.lotto_type_name, 
-                mb.name, 
-                mb.familyName
-        `;
-    }
+      if (status === "0" || status === "1") {
+        sql += " AND p.status_result = ? ";
+        params.push(status);
+      }
+
+      if (search) {
+        sql +=
+          " AND (mb.name LIKE CONCAT('%', ?, '%') OR p.poy_code LIKE CONCAT('%', ?, '%') OR mb.phone LIKE CONCAT('%', ?, '%')) ";
+        params.push(search, search, search);
+      }
 
       sql += `
-        ORDER BY p.created_at DESC
+        GROUP BY 
+            p.poy_code, 
+            p.created_at, 
+            p.status, 
+            p.lotto_type_id, 
+            p.status_result, 
+            p.total, 
+            p.discount, 
+            p.price, 
+            p.note, 
+            lt.lotto_type_name, 
+            mb.name, 
+            mb.familyName
       `;
+
+      if (status === "1") {
+        sql += " HAVING sum_prize > 0 ";
+      }
+
+      sql += ` ORDER BY p.created_at DESC`;
+
       connection.query(sql, params, (error, result) => {
-        if (error) return res.status(500).send({ status: false, msg: error });
+        if (error) {
+          console.error("SQL Error:", error);
+          return res
+            .status(500)
+            .send({ status: false, msg: "เกิดข้อผิดพลาดในการดึงข้อมูล" });
+        }
+
         const data = paginatedResults(req, res, result);
         return res.status(200).send({ status: true, data });
       });
@@ -146,6 +154,75 @@ router.get("/prize-result", verifyToken, (req, res) => {
     }
   });
 });
+
+router.get("/turnover", verifyToken, (req, res) => {
+  jwt.verify(req.token, "secretkey", (err, data) => {
+    if (!err) {
+      const {
+        search,
+        lotto_type_id,
+        startDate,
+        endDate
+      } = req.query;
+
+      if (!startDate || !endDate) {
+        return res
+          .status(400)
+          .send({ status: false, msg: "กรุณาส่ง startDate, endDate" });
+      }
+
+      let sql = `
+        SELECT 
+          SUM(p.total) AS turnover,
+          SUM(CASE WHEN p.status_result = 0 THEN p.total ELSE 0 END) AS outstanding
+        FROM poy AS p
+        LEFT JOIN member AS mb ON p.created_by = mb.id
+        WHERE p.date_lotto >= ? 
+          AND p.date_lotto < DATE_ADD(?, INTERVAL 1 DAY)
+      `;
+
+      const params = [startDate, endDate];
+
+      if (search) {
+        sql += `
+          AND (
+            mb.name LIKE CONCAT('%', ?, '%') 
+            OR p.poy_code LIKE CONCAT('%', ?, '%') 
+            OR mb.phone LIKE CONCAT('%', ?, '%')
+          )
+        `;
+        params.push(search, search, search);
+      }
+
+      if (lotto_type_id) {
+        sql += " AND p.lotto_type_id = ? ";
+        params.push(lotto_type_id);
+      }
+
+      connection.query(sql, params, (error, result) => {
+        if (error) {
+          console.error("SQL Error:", error);
+          return res
+            .status(500)
+            .send({ status: false, msg: "เกิดข้อผิดพลาดในการดึงข้อมูล" });
+        }
+
+        return res.status(200).send({
+          status: true,
+          data: {
+            turnover: parseFloat(result[0].turnover || 0),
+            outstanding: parseFloat(result[0].outstanding || 0),
+          },
+        });
+      });
+    } else {
+      return res
+        .status(403)
+        .send({ status: false, msg: "กรุณาเข้าสู่ระบบ" });
+    }
+  });
+});
+
 
 router.get("/detail-prize-result", verifyToken, (req, res) => {
   jwt.verify(req.token, "secretkey", (err, data) => {

@@ -58,140 +58,205 @@ function dateChange(d) {
   return moment(d).format("YYYY-MM-DD");
 }
 
-router.get("/", (req, res) => {
-  // jwt.verify(req.token, "secretkey", (err, data) => {
-  // if (!err) {
-  try {
-    const lotto_type_id = req.query.lotto_type_id;
-    const date = req.query.date;
-    // last query
-    //SELECT * FROM Table ORDER BY ID DESC LIMIT 1
-    if (lotto_type_id != undefined && date != undefined) {
-      var sql = `SELECT lt.active, IFNULL((p.prize6digit), 'xxxxxx') as prize6digit, p.prize3bottom, p.prize3top, p.prize2bottom, lt.lotto_type_name, lt.lotto_type_id, lt.lotto_type_img, lt.lotto_type_img, p.prize_time FROM prize as p LEFT JOIN lotto_type as lt ON p.lotto_type_id = lt.lotto_type_id WHERE lt.type_id IN ("2") AND p.status = 1 ORDER BY p.prize_time DESC LIMIT 2`;
-      connection.query(sql, [], (error, resultThai, fields) => {
-        var sql = `SELECT lt.lotto_type_id, lt.type_id, lt.lotto_type_name, lt.lotto_type_img, lt.closing_time, lt.active, IFNULL(( SELECT p.prize6digit FROM prize as p WHERE p.prize_time = ? AND p.lotto_type_id = lt.lotto_type_id AND p.status = 1 ORDER BY p.prize_id DESC LIMIT 1), 'xxxxxx') AS prize6digit, IFNULL((SELECT p.prize3bottom FROM prize as p WHERE p.prize_time = ? AND p.lotto_type_id = lt.lotto_type_id AND p.status = 1 ORDER BY p.prize_id DESC LIMIT 1), NULL) AS prize3bottom, IFNULL(( SELECT p.prize3top FROM prize as p WHERE p.prize_time = ? AND p.lotto_type_id = lt.lotto_type_id AND p.status = 1 ORDER BY p.prize_id DESC LIMIT 1), 'xxx') AS prize3top, IFNULL(( SELECT p.prize2bottom FROM prize as p WHERE p.prize_time = ? AND p.lotto_type_id = lt.lotto_type_id AND p.status = 1 AND lt.lotto_type_id = ? ORDER BY p.prize_id DESC LIMIT 1), 'xx') AS prize2bottom FROM lotto_type AS lt ORDER BY closing_time ASC`;
-        connection.query(
-          sql,
-          [date, date, date, date, lotto_type_id],
-          (error, result, fields) => {
-            // if (error) return res.status(400);
-            // console.log(error, "result");
-            try {
-              if (result === undefined) {
-                return res
-                  .status(400)
-                  .send({ status: false, data: result, thai: resultThai });
-              } else {
-                return res
-                  .status(200)
-                  .send({ status: true, data: result, thai: resultThai });
-              }
-            } catch (error) {
-              console.log(error);
-            }
-          }
-        );
-      });
-    } else if (date != undefined) {
-      var sql = `SELECT lt.active, IFNULL((p.prize6digit), 'xxxxxx') as prize6digit, p.prize3bottom, p.prize3top, p.prize2bottom, lt.lotto_type_name, lt.lotto_type_id, lt.lotto_type_img, lt.lotto_type_img, p.prize_time FROM prize as p LEFT JOIN lotto_type as lt ON p.lotto_type_id = lt.lotto_type_id WHERE lt.type_id IN ("2") AND p.status = 1 ORDER BY p.prize_time DESC LIMIT 2`;
-      connection.query(sql, [], (error, resultThai, fields) => {
-        var sql = `SELECT 
-    lt.lotto_type_id, 
-    lt.type_id, 
-    lt.lotto_type_name, 
-    lt.lotto_type_img, 
-    lt.closing_time, 
-    lt.active, 
-    p.prize_time,
-    COALESCE(p.prize6digit, 'xxxxxx') AS prize6digit,
-    COALESCE(p.prize3bottom, NULL) AS prize3bottom,
-    COALESCE(
-        CASE WHEN p.prize_time <= CURDATE() THEN p.prize3top ELSE 'xxx' END, 'xxx'
-    ) AS prize3top,
-    COALESCE(p.prize2bottom, 'xx') AS prize2bottom
-FROM lotto_type AS lt  
-LEFT JOIN (
-    SELECT p1.* 
-    FROM prize p1  
-    INNER JOIN (
-        SELECT lotto_type_id, MAX(prize_time) AS latest_time  
-        FROM prize  
-        WHERE prize_time <= CURDATE()  
-        GROUP BY lotto_type_id  
-    ) p2 ON p1.lotto_type_id = p2.lotto_type_id AND p1.prize_time = p2.latest_time  
-) AS p ON lt.lotto_type_id = p.lotto_type_id  
-ORDER BY lt.closing_time ASC;
-`;
-        connection.query(
-          sql,
-          [date, date, date, date],
-          (error, result, fields) => {
-            console.log(error);
-            try {
-              if (result === undefined) {
-                return res
-                  .status(400)
-                  .send({ status: false, data: result, thai: resultThai });
-              } else {
-                return res
-                  .status(200)
-                  .send({ status: true, data: result, thai: resultThai });
-              }
-            } catch (error) {
-              console.log(error);
-            }
-          }
-        );
-      });
-    } else {
-      return res
-        .status(400)
-        .send({ status: false, msg: "กรุณาส่ง lotto_type_id, date" });
-    }
-  } catch (e) {
-    console.log(e);
+// router.get("/", (req, res) => {
+//   // jwt.verify(req.token, "secretkey", (err, data) => {
+//   // if (!err) {
+//   try {
+//     const lotto_type_id = req.query.lotto_type_id;
+//     const date = req.query.date;
+//     // last query
+//     //SELECT * FROM Table ORDER BY ID DESC LIMIT 1
+//     if (lotto_type_id != undefined && date != undefined) {
+//       var sql = `SELECT lt.active, IFNULL((p.prize6digit), 'xxxxxx') as prize6digit, p.prize3bottom, p.prize3top, p.prize2bottom, lt.lotto_type_name, lt.lotto_type_id, lt.lotto_type_img, lt.lotto_type_img, p.prize_time FROM prize as p LEFT JOIN lotto_type as lt ON p.lotto_type_id = lt.lotto_type_id WHERE lt.type_id IN ("2") AND p.status = 1 ORDER BY p.prize_time DESC LIMIT 3`;
+//       connection.query(sql, [], (error, resultThai, fields) => {
+//         var sql = `SELECT lt.lotto_type_id, lt.type_id, lt.lotto_type_name, lt.lotto_type_img, lt.closing_time, lt.active, IFNULL(( SELECT p.prize6digit FROM prize as p WHERE p.prize_time = ? AND p.lotto_type_id = lt.lotto_type_id AND p.status = 1 ORDER BY p.prize_id DESC LIMIT 1), 'xxxxxx') AS prize6digit, IFNULL((SELECT p.prize3bottom FROM prize as p WHERE p.prize_time = ? AND p.lotto_type_id = lt.lotto_type_id AND p.status = 1 ORDER BY p.prize_id DESC LIMIT 1), NULL) AS prize3bottom, IFNULL(( SELECT p.prize3top FROM prize as p WHERE p.prize_time = ? AND p.lotto_type_id = lt.lotto_type_id AND p.status = 1 ORDER BY p.prize_id DESC LIMIT 1), 'xxx') AS prize3top, IFNULL(( SELECT p.prize2bottom FROM prize as p WHERE p.prize_time = ? AND p.lotto_type_id = lt.lotto_type_id AND p.status = 1 AND lt.lotto_type_id = ? ORDER BY p.prize_id DESC LIMIT 1), 'xx') AS prize2bottom FROM lotto_type AS lt ORDER BY closing_time ASC`;
+//         connection.query(
+//           sql,
+//           [date, date, date, date, lotto_type_id],
+//           (error, result, fields) => {
+//             // if (error) return res.status(400);
+//             // console.log(error, "result");
+//             try {
+//               if (result === undefined) {
+//                 return res
+//                   .status(400)
+//                   .send({ status: false, data: result, thai: resultThai });
+//               } else {
+//                 return res
+//                   .status(200)
+//                   .send({ status: true, data: result, thai: resultThai });
+//               }
+//             } catch (error) {
+//               console.log(error);
+//             }
+//           }
+//         );
+//       });
+//     } else if (date != undefined) {
+//       var sql = `SELECT lt.active, IFNULL((p.prize6digit), 'xxxxxx') as prize6digit, p.prize3bottom, p.prize3top, p.prize2bottom, lt.lotto_type_name, lt.lotto_type_id, lt.lotto_type_img, lt.lotto_type_img, p.prize_time FROM prize as p LEFT JOIN lotto_type as lt ON p.lotto_type_id = lt.lotto_type_id WHERE lt.type_id IN ("2") AND p.status = 1 ORDER BY p.prize_time DESC LIMIT 3`;
+//       connection.query(sql, [], (error, resultThai, fields) => {
+//         var sql = `SELECT 
+//     lt.lotto_type_id, 
+//     lt.type_id, 
+//     lt.lotto_type_name, 
+//     lt.lotto_type_img, 
+//     lt.closing_time, 
+//     lt.active, 
+//     p.prize_time,
+//     COALESCE(p.prize6digit, 'xxxxxx') AS prize6digit,
+//     COALESCE(p.prize3bottom, NULL) AS prize3bottom,
+//     COALESCE(
+//         CASE WHEN p.prize_time <= CURDATE() THEN p.prize3top ELSE 'xxx' END, 'xxx'
+//     ) AS prize3top,
+//     COALESCE(p.prize2bottom, 'xx') AS prize2bottom
+// FROM lotto_type AS lt  
+// LEFT JOIN (
+//     SELECT p1.* 
+//     FROM prize p1  
+//     INNER JOIN (
+//         SELECT lotto_type_id, MAX(prize_time) AS latest_time  
+//         FROM prize  
+//         WHERE prize_time <= CURDATE()  
+//         GROUP BY lotto_type_id  
+//     ) p2 ON p1.lotto_type_id = p2.lotto_type_id AND p1.prize_time = p2.latest_time  
+// ) AS p ON lt.lotto_type_id = p.lotto_type_id  
+// ORDER BY lt.closing_time ASC;
+// `;
+//         connection.query(
+//           sql,
+//           [date, date, date, date],
+//           (error, result, fields) => {
+//             console.log(error);
+//             try {
+//               if (result === undefined) {
+//                 return res
+//                   .status(400)
+//                   .send({ status: false, data: result, thai: resultThai });
+//               } else {
+//                 return res
+//                   .status(200)
+//                   .send({ status: true, data: result, thai: resultThai });
+//               }
+//             } catch (error) {
+//               console.log(error);
+//             }
+//           }
+//         );
+//       });
+//     } else {
+//       return res
+//         .status(400)
+//         .send({ status: false, msg: "กรุณาส่ง lotto_type_id, date" });
+//     }
+//   } catch (e) {
+//     console.log(e);
+//   }
+
+//   /////////////////////////////////////////////
+//   // connection.query(sql, [date, lotto_type_id], (error, result, fields) => {
+//   //
+//   //   console.log(result);
+//   //   try {
+//   //     if (result === undefined) {
+//   //       // var sql =
+//   //       //   "SELECT lotto_type_name, lotto_type_img, closing_time FROM lotto_type WHERE lotto_type_id = ?";
+//   //       // connection.query(sql, [lotto_type_id], (error, resultType, fields) => {
+//   //       //
+//   //       //   if (resultType) {
+//   //       //     const result = resultType;
+//   //       //     result = {
+//   //       //       ...data,
+//   //       //       type3top: "3 ตัวบน",
+//   //       //       prize3top: "xxx",
+//   //       //       type2bottom: "2 ตัวล่าง",
+//   //       //       prize2bottom: "xx",
+//   //       //     };
+
+//   //       //   }
+//   //       // });
+//   //       return res.status(400).send({ status: false, data: result });
+//   //     } else {
+//   //       return res.status(200).send({ status: true, data: result });
+//   //     }
+//   //   } catch (error) {
+//   //     console.log(error);
+//   //   }
+//   // });
+//   ///////////////////////////////
+//   //   } else {
+//   //   return res
+//   //     .status(400)
+//   //     .send({ status: "error", msg: "กรุณาส่ง page, perPage" });
+//   //   }
+//   // } else {
+//   //     res.status(403).send({ status: false, msg: "กรุณาเข้าสู่ระบบ" });
+//   // }
+//   // });
+// });
+
+router.get("/", async (req, res) => {
+  const { lotto_type_id, date } = req.query;
+
+  if (!date) {
+    return res.status(400).send({
+      status: false,
+      msg: "กรุณาส่ง lotto_type_id และ date",
+    });
   }
 
-  /////////////////////////////////////////////
-  // connection.query(sql, [date, lotto_type_id], (error, result, fields) => {
-  //
-  //   console.log(result);
-  //   try {
-  //     if (result === undefined) {
-  //       // var sql =
-  //       //   "SELECT lotto_type_name, lotto_type_img, closing_time FROM lotto_type WHERE lotto_type_id = ?";
-  //       // connection.query(sql, [lotto_type_id], (error, resultType, fields) => {
-  //       //
-  //       //   if (resultType) {
-  //       //     const result = resultType;
-  //       //     result = {
-  //       //       ...data,
-  //       //       type3top: "3 ตัวบน",
-  //       //       prize3top: "xxx",
-  //       //       type2bottom: "2 ตัวล่าง",
-  //       //       prize2bottom: "xx",
-  //       //     };
+  try {
+    // ดึงข้อมูลหวยรัฐบาล (type_id = 2)
+    const [resultThai] = await connection.promise().query(`
+      SELECT lt.active, 
+             IFNULL(p.prize6digit, 'xxxxxx') AS prize6digit, 
+             p.prize3bottom, p.prize3top, p.prize2bottom, 
+             lt.lotto_type_name, lt.lotto_type_id, lt.lotto_type_img, 
+             p.prize_time 
+      FROM prize p 
+      LEFT JOIN lotto_type lt ON p.lotto_type_id = lt.lotto_type_id 
+      WHERE lt.type_id = 2 AND p.status = 1 
+      ORDER BY p.prize_time DESC 
+      LIMIT 3
+    `);
 
-  //       //   }
-  //       // });
-  //       return res.status(400).send({ status: false, data: result });
-  //     } else {
-  //       return res.status(200).send({ status: true, data: result });
-  //     }
-  //   } catch (error) {
-  //     console.log(error);
-  //   }
-  // });
-  ///////////////////////////////
-  //   } else {
-  //   return res
-  //     .status(400)
-  //     .send({ status: "error", msg: "กรุณาส่ง page, perPage" });
-  //   }
-  // } else {
-  //     res.status(403).send({ status: false, msg: "กรุณาเข้าสู่ระบบ" });
-  // }
-  // });
+    let query = `
+      SELECT 
+        lt.lotto_type_id, lt.type_id, lt.lotto_type_name, 
+        lt.lotto_type_img, lt.closing_time, lt.active,
+        COALESCE(p.prize6digit, 'xxxxxx') AS prize6digit,
+        COALESCE(p.prize3bottom, NULL) AS prize3bottom,
+        COALESCE(p.prize3top, 'xxx') AS prize3top,
+        COALESCE(p.prize2bottom, 'xx') AS prize2bottom,
+        p.prize_time
+      FROM lotto_type lt
+      LEFT JOIN prize p 
+        ON p.lotto_type_id = lt.lotto_type_id 
+       AND p.prize_time = ?
+       AND p.status = 1
+    `;
+    const params = [date];
+
+    if (lotto_type_id) {
+      query += ` WHERE lt.lotto_type_id = ?`;
+      params.push(lotto_type_id);
+    }
+
+    query += ` ORDER BY lt.closing_time ASC`;
+
+    const [result] = await connection.promise().query(query, params);
+
+    return res.status(200).send({
+      status: true,
+      data: result,
+      thai: resultThai,
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).send({
+      status: false,
+      msg: "เกิดข้อผิดพลาด",
+    });
+  }
 });
 
 // router.get("/lotto-results", verifyToken, (req, res) => {
@@ -832,7 +897,7 @@ router.get("/lotto-results", verifyToken, async (req, res) => {
       `SELECT ln.*, mb.credit_balance FROM lotto_number as ln 
        JOIN lotto_type as lt ON ln.lotto_type_id = lt.lotto_type_id 
        JOIN member as mb ON ln.created_by = mb.id 
-       WHERE ln.lotto_type_id = ? AND ln.status_poy = 'SUC' AND ln.installment_date LIKE ?`,
+       WHERE ln.lotto_type_id = ? AND ln.status_poy = 'SUC' AND ln.date_lotto LIKE ?`,
       [lotto_type_id, `%${installment}%`]
     );
 
@@ -875,7 +940,7 @@ router.get("/lotto-results", verifyToken, async (req, res) => {
     await connection
       .promise()
       .query(
-        `UPDATE poy SET status_result = 1 WHERE lotto_type_id = ? AND installment_date = ?`,
+        `UPDATE poy SET status_result = 1 WHERE lotto_type_id = ? AND date_lotto = ?`,
         [lotto_type_id, installment]
       );
     await connection
@@ -1095,76 +1160,143 @@ router.delete("/delete-award", verifyToken, (req, res) => {
   });
 });
 
-router.put("/update-creditbalacne", verifyToken, (req, res) => {
-  jwt.verify(req.token, "secretkey", (err, data) => {
-    const lotto_type_id = req.body.lotto_type_id;
-    const installment = req.body.installment;
-    if (!err) {
-      if (lotto_type_id != "" && installment != "") {
-        var sql = "SELECT * FROM lotto_type WHERE lotto_type_id = ?";
-        connection.query(
-          sql,
-          [lotto_type_id],
-          (error, resultTypeLotto, fields) => {
-            if (resultTypeLotto.length > 0) {
-              // var date = moment(resultTypeLotto[0].closing_time).format(
-              //   "YYYY-MM-DD"
-              // );
-              var sql = `SELECT SUM(total * pay) as total, created_by FROM lotto_number WHERE installment_date = ? AND lotto_type_id = ? AND status = 'suc' GROUP BY created_by`;
-              connection.query(
-                sql,
-                [installment, lotto_type_id],
-                (error, result, fields) => {
-                  let totalCredit = 0;
-                  result.forEach((item) => {
-                    connection.query(
-                      `SELECT credit_balance FROM member WHERE id = ?`,
-                      [item.created_by],
-                      (error, resultCredit, fields) => {
-                        if (resultCredit != "") {
-                          totalCredit =
-                            parseFloat(resultCredit[0].credit_balance) +
-                            parseFloat(item.total);
-                          connection.query(
-                            `UPDATE member SET credit_balance = ? WHERE id = ?`,
-                            [totalCredit, item.created_by],
-                            (error, result, fields) => {}
-                          );
-                          connection.query(
-                            `INSERT INTO credit_log (credit_previous,credit_after,created_by,lotto_type_id, note, installment, prize) VALUES (?,?,?,?,?,?,?)`,
-                            [
-                              resultCredit[0].credit_balance,
-                              totalCredit,
-                              item.created_by,
-                              lotto_type_id,
-                              `ถูกรางวัล ${item.total} บาท`,
-                              installment,
-                              item.total,
-                            ],
-                            (error, result, fields) => {}
-                          );
-                        }
-                      }
-                    );
-                  });
-                  return res
-                    .status(200)
-                    .send({ status: false, msg: "อัพเดทเครดิตสำเร็จ" });
-                }
-              );
-            }
-          }
-        );
-      } else {
-        return res
-          .status(400)
-          .send({ status: false, msg: "กรุณาส่ง lotto_type_id" });
-      }
-    } else {
-      res.status(403).send({ status: false, msg: "กรุณาเข้าสู่ระบบ" });
+// router.put("/update-creditbalacne", verifyToken, (req, res) => {
+//   jwt.verify(req.token, "secretkey", (err, data) => {
+//     const lotto_type_id = req.body.lotto_type_id;
+//     const installment = req.body.installment;
+//     if (!err) {
+//       if (lotto_type_id != "" && installment != "") {
+//         var sql = "SELECT * FROM lotto_type WHERE lotto_type_id = ?";
+//         connection.query(
+//           sql,
+//           [lotto_type_id],
+//           (error, resultTypeLotto, fields) => {
+//             if (resultTypeLotto.length > 0) {
+//               // var date = moment(resultTypeLotto[0].closing_time).format(
+//               //   "YYYY-MM-DD"
+//               // );
+//               var sql = `SELECT SUM(total * pay) as total, created_by FROM lotto_number WHERE installment_date = ? AND lotto_type_id = ? AND status = 'suc' GROUP BY created_by`;
+//               connection.query(
+//                 sql,
+//                 [installment, lotto_type_id],
+//                 (error, result, fields) => {
+//                   let totalCredit = 0;
+//                   result.forEach((item) => {
+//                     connection.query(
+//                       `SELECT credit_balance FROM member WHERE id = ?`,
+//                       [item.created_by],
+//                       (error, resultCredit, fields) => {
+//                         if (resultCredit != "") {
+//                           totalCredit =
+//                             parseFloat(resultCredit[0].credit_balance) +
+//                             parseFloat(item.total);
+//                           connection.query(
+//                             `UPDATE member SET credit_balance = ? WHERE id = ?`,
+//                             [totalCredit, item.created_by],
+//                             (error, result, fields) => {}
+//                           );
+//                           connection.query(
+//                             `INSERT INTO credit_log (credit_previous,credit_after,created_by,lotto_type_id, note, installment, prize) VALUES (?,?,?,?,?,?,?)`,
+//                             [
+//                               resultCredit[0].credit_balance,
+//                               totalCredit,
+//                               item.created_by,
+//                               lotto_type_id,
+//                               `ถูกรางวัล ${item.total} บาท`,
+//                               installment,
+//                               item.total,
+//                             ],
+//                             (error, result, fields) => {}
+//                           );
+//                         }
+//                       }
+//                     );
+//                   });
+//                   return res
+//                     .status(200)
+//                     .send({ status: false, msg: "อัพเดทเครดิตสำเร็จ" });
+//                 }
+//               );
+//             }
+//           }
+//         );
+//       } else {
+//         return res
+//           .status(400)
+//           .send({ status: false, msg: "กรุณาส่ง lotto_type_id" });
+//       }
+//     } else {
+//       res.status(403).send({ status: false, msg: "กรุณาเข้าสู่ระบบ" });
+//     }
+//   });
+// });
+router.put("/update-creditbalacne", verifyToken, async (req, res) => {
+  try {
+    const decoded = jwt.verify(req.token, "secretkey");
+    const { lotto_type_id, installment } = req.body;
+
+    if (!lotto_type_id || !installment) {
+      return res.status(400).json({ status: false, msg: "กรุณาส่งข้อมูลให้ครบ" });
     }
-  });
+
+    const [lottoTypeRows] = await connection
+      .promise()
+      .query("SELECT * FROM lotto_type WHERE lotto_type_id = ?", [lotto_type_id]);
+
+    if (lottoTypeRows.length === 0) {
+      return res.status(400).json({ status: false, msg: "ไม่พบประเภทหวยที่ต้องการอัปเดต" });
+    }
+
+    const [winners] = await connection
+      .promise()
+      .query(
+        `SELECT SUM(total * pay) as total, created_by 
+         FROM lotto_number 
+         WHERE installment_date = ? AND lotto_type_id = ? AND status = 'suc' 
+         GROUP BY created_by`,
+        [installment, lotto_type_id]
+      );
+
+    for (const winner of winners) {
+      const [[member]] = await connection
+        .promise()
+        .query("SELECT credit_balance FROM member WHERE id = ?", [winner.created_by]);
+
+      const creditBefore = parseFloat(member.credit_balance || 0);
+      const prizeAmount = parseFloat(winner.total || 0);
+      const creditAfter = creditBefore + prizeAmount;
+
+      await connection
+        .promise()
+        .query("UPDATE member SET credit_balance = ? WHERE id = ?", [
+          creditAfter,
+          winner.created_by,
+        ]);
+
+      await connection
+        .promise()
+        .query(
+          `INSERT INTO credit_log (credit_previous, credit_after, created_by, lotto_type_id, note, installment, prize)
+           VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          [
+            creditBefore,
+            creditAfter,
+            winner.created_by,
+            lotto_type_id,
+            `ถูกรางวัล ${prizeAmount} บาท`,
+            installment,
+            prizeAmount,
+          ]
+        );
+    }
+
+    return res.status(200).json({ status: true, msg: "อัปเดตเครดิตสำเร็จแล้ว" });
+  } catch (err) {
+    console.error("update-creditbalance error:", err);
+    return res.status(500).json({ status: false, msg: "เกิดข้อผิดพลาด" });
+  }
 });
+
 
 router.post("/add-type", verifyToken, (req, res) => {
   jwt.verify(req.token, "secretkey", (err, data) => {
