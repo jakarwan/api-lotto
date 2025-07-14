@@ -147,7 +147,15 @@ router.get("/prize-result", verifyToken, (req, res) => {
         }
 
         const data = paginatedResults(req, res, result);
-        return res.status(200).send({ status: true, data: user.user.id !== 1131 ? data: [] });
+        return res
+          .status(200)
+          .send({
+            status: true,
+            data:
+              user.user.id !== 1131
+                ? data
+                : { data: [], page: "1", perPage: "10", total: 0 },
+          });
       });
     } else {
       return res.status(403).send({ status: false, msg: "กรุณาเข้าสู่ระบบ" });
@@ -158,12 +166,7 @@ router.get("/prize-result", verifyToken, (req, res) => {
 router.get("/turnover", verifyToken, (req, res) => {
   jwt.verify(req.token, "secretkey", (err, data) => {
     if (!err) {
-      const {
-        search,
-        lotto_type_id,
-        startDate,
-        endDate
-      } = req.query;
+      const { search, lotto_type_id, startDate, endDate } = req.query;
 
       if (!startDate || !endDate) {
         return res
@@ -216,13 +219,10 @@ router.get("/turnover", verifyToken, (req, res) => {
         });
       });
     } else {
-      return res
-        .status(403)
-        .send({ status: false, msg: "กรุณาเข้าสู่ระบบ" });
+      return res.status(403).send({ status: false, msg: "กรุณาเข้าสู่ระบบ" });
     }
   });
 });
-
 
 router.get("/detail-prize-result", verifyToken, (req, res) => {
   jwt.verify(req.token, "secretkey", (err, data) => {
